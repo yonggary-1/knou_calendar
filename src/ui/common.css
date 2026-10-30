@@ -1,0 +1,74 @@
+:root {
+  --bg: #ffffff;
+  --surface: #f4f6f9;
+  --line: #e2e6ec;
+  --text: #17202b;
+  --muted: #5d6b7c;
+  --brand: #0054a7;
+  --brand-2: #00a0e9;
+  --brand-ink: #ffffff;
+  --ok: #16a34a;
+  --warn: #d97706;
+  --bad: #dc2626;
+  --add: #0f7b3f;
+  --add-bg: #e3f5ea;
+  --rep: #8a5a00;
+  --rep-bg: #fdf1d8;
+  --del: #b42318;
+  --del-bg: #fde7e5;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12161c;
+    --surface: #1b2129;
+    --line: #2a323d;
+    --text: #e6ebf1;
+    --muted: #93a1b2;
+    --brand: #4f9bff;
+    --brand-2: #38bdf8;
+    --brand-ink: #08121f;
+    --add: #6ee7a0;
+    --add-bg: #133122;
+    --rep: #fcd34d;
+    --rep-bg: #3a2c0c;
+    --del: #fca5a5;
+    --del-bg: #3d1614;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body {
+  font: 13px/1.5 "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button {
+  font: inherit;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+button:hover { filter: brightness(0.97); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); font-weight: 600; }
+button.danger { background: transparent; border-color: var(--bad); color: var(--bad); }
+button.ghost { background: transparent; border-color: transparent; }
+button.link { background: none; border: 0; padding: 2px 4px; color: var(--brand); font-weight: 600; }
+button.icon { padding: 4px; line-height: 0; color: var(--muted); }
+input[type="text"], input[type="number"], select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  width: 100%;
+}
+input:focus, select:focus, button:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 1px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }

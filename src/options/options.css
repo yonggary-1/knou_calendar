@@ -1,0 +1,37 @@
+body { background: var(--surface); }
+.wrap { max-width: 720px; margin: 0 auto; padding: 28px 16px 48px; display: grid; gap: 16px; }
+.head { display: flex; align-items: center; gap: 12px; }
+.head img { border-radius: 9px; }
+h1 { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+h2 { margin: 0 0 6px; font-size: 15px; }
+.head p { margin: 2px 0 0; }
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 16px; display: grid; gap: 12px; }
+.card > p { margin: 0; }
+.field { display: grid; gap: 5px; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.copyrow { display: flex; gap: 6px; }
+.copyrow button { white-space: nowrap; flex: none; }
+.copyrow input { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.inline.gap { gap: 10px; }
+.toggles { display: grid; gap: 7px; }
+.toggles label { display: flex; align-items: center; gap: 8px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+.small { font-size: 12px; }
+details.card > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::before { content: '▸'; color: var(--muted); transition: transform .15s; }
+details.card[open] > summary::before { transform: rotate(90deg); }
+details.card > summary h2 { margin: 0; }
+.adv { display: grid; gap: 12px; }
+.adv > p { margin: 0; }
+.savebar { position: sticky; bottom: 12px; display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.savebar button { padding: 10px 28px; box-shadow: 0 4px 14px rgba(0, 0, 0, .12); }
+
+table.places { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.places th { text-align: left; font-weight: 600; color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); }
+table.places td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.places td.auto { color: var(--muted); }
+table.places input { padding: 5px 7px; }
+.empty { padding: 14px; border: 1px dashed var(--line); border-radius: 10px; text-align: center; }

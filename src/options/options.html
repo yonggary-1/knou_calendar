@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Knou calendar 설정</title>
+  <link rel="stylesheet" href="../ui/common.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="head">
+      <img src="../icons/icon48.png" alt="" width="36" height="36">
+      <div>
+        <h1>Knou calendar 설정</h1>
+        <p class="muted" id="ver"></p>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>1. 구글 계정</h2>
+      <div class="inline">
+        <span class="muted">연결된 계정:</span> <b id="account">없음</b>
+        <button id="btnDisconnect" class="link">연결 해제</button>
+      </div>
+      <p class="muted small" id="accountHint">확장 아이콘 → 동기화 확인을 누르면 구글 계정 선택 창이 뜹니다.</p>
+    </section>
+
+    <section class="card">
+      <h2>2. 캘린더</h2>
+      <label class="field">
+        <span>전용 캘린더 이름</span>
+        <input type="text" id="calendarName">
+      </label>
+      <div class="toggles">
+        <label><input type="checkbox" id="showPeriod"> 과제 제출기간을 종일 일정으로 표시</label>
+        <label><input type="checkbox" id="showDeadline"> 마감 시각에 마감 일정 만들기</label>
+        <label><input type="checkbox" id="showFormative"> 형성평가 학습 기간 포함</label>
+        <label><input type="checkbox" id="autoApply"> 미리보기 없이 바로 반영 <span class="muted">(권장하지 않음)</span></label>
+      </div>
+      <div class="grid2">
+        <label class="field">
+          <span>출석수업 알림 (몇 분 전, 쉼표로 구분)</span>
+          <input type="text" id="classReminders" placeholder="1440,120">
+        </label>
+        <label class="field">
+          <span>마감 알림 (몇 분 전, 쉼표로 구분)</span>
+          <input type="text" id="deadlineReminders" placeholder="1440,180">
+        </label>
+      </div>
+      <p class="muted small">1440 = 1일 전, 180 = 3시간 전. 최대 5개.</p>
+    </section>
+
+    <section class="card">
+      <h2>3. 장소 이름</h2>
+      <p class="muted">방통대 페이지의 장소를 구글 지도가 찾을 수 있는 정식 명칭으로 자동 변환합니다. 결과가 틀리면 오른쪽 칸에 직접 입력하세요. 다음 동기화부터 적용됩니다.</p>
+      <div id="places"></div>
+    </section>
+
+    <details class="card" id="advanced">
+      <summary><h2>4. 고급</h2></summary>
+      <div class="adv">
+        <p class="muted" id="builtinInfo"></p>
+        <label class="field">
+          <span>직접 만든 OAuth 클라이언트 ID (비워두면 내장 ID 사용)</span>
+          <input type="text" id="clientId" placeholder="1234567890-xxxx.apps.googleusercontent.com" spellcheck="false" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>이 브라우저의 리디렉션 URI (직접 만든 클라이언트에 등록)</span>
+          <div class="copyrow">
+            <input type="text" id="redirect" readonly>
+            <button id="btnCopy">복사</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>권한 범위</span>
+          <select id="scopeMode">
+            <option value="app">Knou calendar가 만든 캘린더만 (권장)</option>
+            <option value="full">전체 캘린더 (위 방식이 거부될 때만)</option>
+          </select>
+        </label>
+      </div>
+    </details>
+
+    <div class="savebar">
+      <span id="saved" class="muted"></span>
+      <button id="btnSave" class="primary">저장</button>
+    </div>
+
+    <section class="card">
+      <h2>5. 문제 해결</h2>
+      <div class="inline gap">
+        <button id="btnReport">버그 리포트 저장</button>
+        <span class="muted small">이름·학번·이메일은 들어가지 않습니다.</span>
+      </div>
+      <div class="inline gap">
+        <button id="btnReset" class="danger">전용 캘린더 초기화</button>
+        <span class="muted small">전용 캘린더를 통째로 삭제합니다. 다음 동기화 때 새로 만듭니다.</span>
+      </div>
+    </section>
+  </div>
+
+  <script src="../lib/env.js"></script>
+  <script src="../lib/core.js"></script>
+  <script src="../lib/settings.js"></script>
+  <script src="../ui/dom.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

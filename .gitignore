@@ -1,0 +1,21 @@
+# 빌드 결과물
+dist/
+*.zip
+*.xpi
+*.crx
+node_modules/
+
+# 개인정보가 담긴 MyKNOU 저장 페이지는 절대 올리지 않는다
+/*.html
+/*_files/
+test/**/*.html
+test/**/*_files/
+
+# 버그 리포트·로그
+*bug_report*.txt
+*.log
+
+# 비밀 파일
+*.pem
+*.key
+.env

@@ -123,6 +123,10 @@
   }
 
   KS.gauth = {
+    // 다른 기능(Dropbox 등)도 이 함수로 인증 창을 연다.
+    // 브라우저가 확장당 인증 창을 하나만 허용하므로, 따로 열면 "Only one web auth flow" 오류가 난다.
+    launchFlow: launch,
+    isFlowBusy: () => flowPending,
     // forceInteractive: [구글 연결] 버튼처럼 동의 창을 바로 열어야 할 때
     async getToken({ interactive = false, selectAccount = false, forceInteractive = false } = {}) {
       if (forceInteractive && interactive) {

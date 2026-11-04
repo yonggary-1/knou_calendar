@@ -69,9 +69,15 @@
     });
     let redirect;
     try {
-      redirect = await KS.ext.identity.launchWebAuthFlow({ url: AUTH + '?' + p.toString(), interactive: true });
+      // 구글 인증과 같은 창 잠금·시간 제한(5분)을 쓴다 (gauth.js launchFlow)
+      redirect = await KS.gauth.launchFlow(AUTH + '?' + p.toString(), true);
     } catch (e) {
-      KS.log('warn', 'Dropbox 인증 창 실패', String(e?.message || e));
+      const msg = String(e?.message || e);
+      KS.log('warn', 'Dropbox 인증 창 실패', msg);
+      if (msg === 'flow_busy' || /only one web auth flow/i.test(msg)) {
+        throw new KS.KsError('DROPBOX', '다른 로그인 창(구글 등)이 아직 열려 있습니다. 그 창을 완료하거나 닫은 뒤 다시 시도하세요.');
+      }
+      if (msg.startsWith('timeout')) throw new KS.KsError('DROPBOX', 'Dropbox 연결 창이 5분 안에 완료되지 않았습니다. 다시 시도해 주세요.');
       throw new KS.KsError('DROPBOX', 'Dropbox 연결이 취소되었거나 완료되지 않았습니다. 앱 설정의 Redirect URI에 이 브라우저의 리디렉션 URI가 등록되어 있는지 확인하세요.');
     }
     const u = new URL(redirect);

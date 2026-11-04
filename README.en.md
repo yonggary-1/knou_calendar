@@ -32,11 +32,11 @@ A browser extension that automatically copies **attendance classes, midterm, fin
 
 ### Chrome · Edge · Whale · Opera
 
-1. Download `knou_calendar_chromium.zip` from [Releases](https://github.com/yonggary-1/knou_calendar/releases) and extract it, e.g. to `C:\Tools\knou_calendar_chromium`.
+1. Download `knou_calendar_chromium.zip` from [Releases](https://github.com/yonggary-1/knou_calendar/releases) and extract it anywhere. For example, extracting to `C:\Tools` creates a `C:\Tools\knou_calendar_chromium` folder.
    - Keep this folder; the extension runs from it.
 2. Open `chrome://extensions`. For other browsers use `edge://extensions`, `whale://extensions`, or `opera://extensions`.
 3. Turn on **Developer mode**.
-4. Click **Load unpacked** and select the extracted folder.
+4. Click **Load unpacked** and select the `knou_calendar_chromium` folder. To update, extract over the same place and press reload (↻) on the extensions page.
 
 ### Firefox
 

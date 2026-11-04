@@ -10,7 +10,8 @@ Knou calendar를 직접 빌드하거나, 자신의 구글 OAuth 클라이언트�
 | `src/lib/` | 핵심 로직 — `knou.js`(MyKNOU 읽기), `nuxt.js`(Nuxt payload 해석), `schedule.js`(일정 변환·비교), `gauth.js`(구글 인증), `gcal.js`(Calendar API), `dropbox.js`(위젯용 Dropbox 내보내기), `sync.js`(동기화 흐름) |
 | `src/config.json` | 빌드에 내장할 구글 OAuth 클라이언트 ID |
 | `src/chromium_key.txt` | Chromium 확장 ID를 고정하는 **공개키** (비밀 아님) |
-| `build.js` | `dist/chromium`, `dist/firefox` 생성 |
+| `build.js` | `dist/chromium`, `dist/firefox` 생성 후 `tools/pack.js`로 첨부 zip까지 만듦 |
+| `tools/pack.js` | 릴리즈 첨부 zip 두 개 생성 (Node 기본 모듈만 사용) |
 | `test/run_test.js` | 저장한 MyKNOU 대시보드 HTML로 파서·일정 변환 점검 |
 | `test/dropbox_test.js` | 가짜 Dropbox로 내보내기 흐름 점검 (네트워크 사용 안 함) |
 
@@ -24,6 +25,10 @@ node build.js
 
 - `dist\chromium` — Chrome·Edge·웨일·오페라용 (확장 ID `akolhboefakmfcodlklbicmaiplebfgp`로 고정)
 - `dist\firefox` — Firefox 140 이상용
+- `dist\knou_calendar_chromium.zip` — 릴리즈 첨부용. 최상위에 `knou_calendar_chromium\` 폴더가 하나 있음
+- `dist\knou_calendar_firefox.zip` — 릴리즈 첨부용. `manifest.json`이 최상위 (Mozilla 서명 제출 형식)
+
+> 릴리즈할 때는 두 zip을 손으로 묶지 말고 `node build.js`가 만든 것을 그대로 쓰세요. 손으로 묶다가 구조가 달라진 적이 있습니다(1.4.0).
 
 ## 점검
 
@@ -112,7 +117,7 @@ node test\dropbox_test.js
 
 일반 파이어폭스는 서명되지 않은 확장을 영구 설치할 수 없습니다.
 
-1. `dist\firefox` 폴더 **안의 내용물**을 zip으로 묶습니다. `manifest.json`이 zip 최상위에 있어야 합니다.
+1. `node build.js`가 만든 `dist\knou_calendar_firefox.zip`을 씁니다. `manifest.json`이 zip 최상위에 있습니다.
 2. https://addons.mozilla.org/developers/ → **Submit a New Add-on** → **On your own**을 선택하고 zip을 업로드합니다.
 3. 서명된 `.xpi`를 받아 설치합니다.
 

@@ -2,6 +2,11 @@
 
 v1.3.0이 GitHub에 올린 첫 릴리즈입니다. 그 이전 버전은 공개 전 개발 과정에서만 쓰였습니다.
 
+## 1.4.1
+- `node build.js`가 릴리즈 첨부 zip 두 개(`dist\knou_calendar_chromium.zip`, `dist\knou_calendar_firefox.zip`)까지 만들도록 했습니다(`tools/pack.js`). 1.4.0에서 손으로 묶으며 달라졌던 Chromium zip 구조를 1.3.0과 같게 되돌렸습니다. 압축을 풀면 `knou_calendar_chromium` 폴더가 생깁니다.
+- Dropbox 연결 창이 구글 로그인 창과 같은 잠금·시간 제한(5분)을 쓰도록 했습니다. 두 창이 겹칠 때 "Only one web auth flow" 오류 대신 안내 문구가 나옵니다.
+- Dropbox 응답이 멈추면 30초 뒤 동기화를 먼저 완료로 처리합니다. 이전에는 "반영 중"에 머물 수 있었습니다. 내보내기에서 예외가 나도 동기화 결과에 영향을 주지 않습니다.
+
 ## 1.4.0
 - 설정에 **Dropbox 내보내기**(위젯용, 선택)를 추가했습니다. PKCE 방식으로 직접 만든 Dropbox 앱(App folder)에 연결합니다.
 - 동기화가 끝날 때마다 남은 일정을 `knou_agenda.json`으로 덮어쓰고, 범위 메모 양식 `knou_scope.json`은 없을 때만 만듭니다. 학기가 바뀌면 옛 양식을 `archive`로 옮깁니다.

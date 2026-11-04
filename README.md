@@ -32,11 +32,11 @@
 
 ### Chrome · Edge · 웨일 · 오페라
 
-1. [Releases](https://github.com/yonggary-1/knou_calendar/releases)에서 `knou_calendar_chromium.zip`을 받아 압축을 풉니다. 예: `C:\Tools\knou_calendar_chromium`
+1. [Releases](https://github.com/yonggary-1/knou_calendar/releases)에서 `knou_calendar_chromium.zip`을 받아 원하는 곳에 압축을 풉니다. 예를 들어 `C:\Tools`에 풀면 `C:\Tools\knou_calendar_chromium` 폴더가 생깁니다.
    - 확장이 이 폴더에서 실행되므로 지우지 마세요.
 2. 주소창에 `chrome://extensions`를 입력합니다. Edge는 `edge://extensions`, 웨일은 `whale://extensions`, 오페라는 `opera://extensions`입니다.
 3. **개발자 모드**를 켭니다.
-4. **압축해제된 확장 프로그램 로드**를 누르고 압축을 푼 폴더를 선택합니다.
+4. **압축해제된 확장 프로그램 로드**를 누르고 `knou_calendar_chromium` 폴더를 선택합니다. 업데이트할 때는 같은 곳에 덮어쓴 뒤 확장 관리 화면에서 새로고침(↻)을 누르면 됩니다.
 
 ### Firefox
 

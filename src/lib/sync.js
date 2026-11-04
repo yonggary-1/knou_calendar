@@ -49,12 +49,35 @@
     await KS.ext.storage.session.remove('ks_agenda_pending');
   }
 
+  // Dropbox 응답이 멈춰도 동기화가 '반영 중'에 머물지 않게 한다.
+  // 시간이 넘으면 기다리기만 멈추고, 내보내기 자체는 뒤에서 끝까지 진행된다 (결과는 ks_dbx_last).
+  const DBX_LIMIT = 30000;
+  async function exportWithLimit() {
+    let timer;
+    try {
+      return await Promise.race([
+        KS.dropbox.exportAgenda(),
+        new Promise((resolve) => {
+          timer = setTimeout(() => {
+            KS.log('warn', 'Dropbox 내보내기 응답 지연 — 동기화는 먼저 완료');
+            resolve({ ok: false, message: 'timeout' });
+          }, DBX_LIMIT);
+        }),
+      ]);
+    } catch (e) {
+      KS.log('warn', 'Dropbox 내보내기 예외', String(e?.message || e));
+      return { ok: false, message: String(e?.message || e) };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function markDone(message) {
     await commitAgenda();
     const now = Date.now();
     await KS.ext.storage.local.set({ ks_last: now });
-    // 위젯용 Dropbox 내보내기 (연결했을 때만). 실패해도 동기화 결과는 그대로 둔다
-    const dbx = await KS.dropbox.exportAgenda();
+    // 위젯용 Dropbox 내보내기 (연결했을 때만). 실패하거나 응답이 늦어도 동기화 결과는 그대로 둔다
+    const dbx = await exportWithLimit();
     if (dbx?.ok === false) message += ' (Dropbox 내보내기 실패 — 설정에서 확인하세요)';
     return State.set({ phase: 'done', message, plan: null, progress: null, error: null, lastSync: now });
   }

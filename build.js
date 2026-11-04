@@ -1,5 +1,5 @@
 // Knou calendar 빌드: node build.js
-//  → dist\chromium (Chrome·Edge·웨일·오페라), dist\firefox
+//  → dist\chromium (Chrome·Edge·웨일·오페라), dist\firefox, 그리고 첨부용 zip 두 개 (tools\pack.js)
 const fs = require('fs');
 const path = require('path');
 
@@ -61,3 +61,8 @@ for (const target of ['chromium', 'firefox']) {
   fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(m, null, 2) + '\n');
   console.log(`빌드 완료: ${path.relative(ROOT, out)}`);
 }
+
+// 릴리즈 첨부용 zip 두 개도 같이 만든다 (빠뜨리지 않게)
+//  dist\knou_calendar_chromium.zip — 최상위 knou_calendar_chromium\ 폴더
+//  dist\knou_calendar_firefox.zip  — manifest.json 이 최상위 (Mozilla 서명 제출 형식)
+require('./tools/pack.js');

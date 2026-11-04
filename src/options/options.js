@@ -2,7 +2,7 @@
   const { h, send, ext } = KS;
   const $ = (id) => document.getElementById(id);
   const CHECKS = ['showPeriod', 'showDeadline', 'showFormative', 'autoApply'];
-  const TEXTS = ['clientId', 'calendarName', 'classReminders', 'deadlineReminders'];
+  const TEXTS = ['clientId', 'calendarName', 'classReminders', 'deadlineReminders', 'dropboxAppKey'];
 
   $('ver').textContent = `버전 ${KS.env.version} · ${KS.env.target === 'firefox' ? 'Firefox' : 'Chrome · Edge · 웨일 · 오페라'} 빌드`;
   $('redirect').value = ext.identity.getRedirectURL();
@@ -34,6 +34,48 @@
     if (!confirm('구글 연결을 해제할까요? 캘린더의 일정은 그대로 남습니다.')) return;
     await send('disconnect');
     await showAccount();
+  };
+
+  // ---- Dropbox ----
+  $('dbxRedirect').value = ext.identity.getRedirectURL();
+  $('btnCopyDbx').onclick = async () => {
+    try { await navigator.clipboard.writeText($('dbxRedirect').value); $('btnCopyDbx').textContent = '복사됨'; }
+    catch { $('dbxRedirect').select(); }
+    setTimeout(() => ($('btnCopyDbx').textContent = '복사'), 1500);
+  };
+  const SCOPE_TEXT = { created: '범위 양식을 새로 만듦', renewed: '새 학기 범위 양식을 만들고 옛 파일은 archive로 옮김', kept: '범위 파일은 그대로 둠' };
+  async function showDropbox(note) {
+    const s = (await send('dropboxStatus')) || {};
+    $('dbxAccount').textContent = s.connected ? `연결됨${s.email ? ' · ' + s.email : ''}` : '연결 안 됨';
+    $('btnDbxConnect').textContent = s.connected ? '다시 연결' : '연결';
+    $('btnDbxExport').hidden = !s.connected;
+    $('btnDbxDisconnect').hidden = !s.connected;
+    const l = s.last;
+    $('dbxLast').textContent = note
+      || (!l ? (s.connected ? '아직 내보낸 적이 없습니다. 동기화하거나 [지금 내보내기]를 누르세요.' : '')
+        : l.ok ? `마지막 내보내기 ${KS.fmtTime(l.at)} · 일정 ${l.items}건 · ${SCOPE_TEXT[l.scope] || ''}`
+        : `마지막 내보내기 실패 ${KS.fmtTime(l.at)} — ${l.message}`);
+  }
+  await showDropbox();
+  $('btnDbxConnect').onclick = async () => {
+    // 입력한 앱 키를 먼저 저장해야 연결할 수 있다
+    settings = await KS.saveSettings({ dropboxAppKey: $('dropboxAppKey').value.trim() });
+    if (!settings.dropboxAppKey) { await showDropbox('Dropbox 앱 키를 먼저 입력하세요.'); return; }
+    await showDropbox('Dropbox 창에서 허용을 눌러 주세요…');
+    const r = await send('connectDropbox');
+    if (!r?.ok) { await showDropbox(r?.message || 'Dropbox 연결에 실패했습니다.'); return; }
+    const x = await send('exportDropbox');
+    await showDropbox(x?.ok === false ? x.message : undefined);
+  };
+  $('btnDbxExport').onclick = async () => {
+    await showDropbox('내보내는 중…');
+    const r = await send('exportDropbox');
+    await showDropbox(r?.ok === false ? r.message : r?.skipped ? '내보낼 일정이 없습니다. 먼저 동기화하세요.' : undefined);
+  };
+  $('btnDbxDisconnect').onclick = async () => {
+    if (!confirm('Dropbox 연결을 해제할까요? Dropbox에 있는 파일은 그대로 남습니다.')) return;
+    await send('disconnectDropbox');
+    await showDropbox();
   };
 
   // ---- 장소 ----

@@ -7,11 +7,12 @@ Knou calendar를 직접 빌드하거나, 자신의 구글 OAuth 클라이언트�
 | 경로 | 내용 |
 |---|---|
 | `src/` | 확장 소스 (manifest 템플릿, 백그라운드, 팝업, 설정 화면) |
-| `src/lib/` | 핵심 로직 — `knou.js`(MyKNOU 읽기), `nuxt.js`(Nuxt payload 해석), `schedule.js`(일정 변환·비교), `gauth.js`(구글 인증), `gcal.js`(Calendar API), `sync.js`(동기화 흐름) |
+| `src/lib/` | 핵심 로직 — `knou.js`(MyKNOU 읽기), `nuxt.js`(Nuxt payload 해석), `schedule.js`(일정 변환·비교), `gauth.js`(구글 인증), `gcal.js`(Calendar API), `dropbox.js`(위젯용 Dropbox 내보내기), `sync.js`(동기화 흐름) |
 | `src/config.json` | 빌드에 내장할 구글 OAuth 클라이언트 ID |
 | `src/chromium_key.txt` | Chromium 확장 ID를 고정하는 **공개키** (비밀 아님) |
 | `build.js` | `dist/chromium`, `dist/firefox` 생성 |
 | `test/run_test.js` | 저장한 MyKNOU 대시보드 HTML로 파서·일정 변환 점검 |
+| `test/dropbox_test.js` | 가짜 Dropbox로 내보내기 흐름 점검 (네트워크 사용 안 함) |
 
 ## 빌드 (Windows, Node.js 18 이상)
 
@@ -30,6 +31,12 @@ MyKNOU 대시보드(m.knou.ac.kr)를 `Ctrl+S`로 저장한 뒤:
 
 ```
 node test\run_test.js "C:\경로\저장한_대시보드.html"
+```
+
+Dropbox 내보내기 점검:
+
+```
+node test\dropbox_test.js
 ```
 
 > 저장한 대시보드 HTML에는 이름·학번·이메일이 들어 있습니다. **저장소에 올리지 마세요.** (`.gitignore`로 막혀 있습니다)
@@ -53,6 +60,54 @@ node test\run_test.js "C:\경로\저장한_대시보드.html"
 
 권한 범위는 기본적으로 `calendar.app.created`입니다. 즉 확장이 직접 만든 캘린더에만 접근하고, 다른 캘린더는 읽지 않습니다.
 
+## Dropbox 내보내기 (위젯용)
+
+`lib/dropbox.js`가 담당합니다. 사용자가 직접 만든 Dropbox 앱의 앱 키(`settings.dropboxAppKey`)로 연결하며, 앱 시크릿은 쓰지 않습니다.
+
+- **인증**: `identity.launchWebAuthFlow` + PKCE(S256), `token_access_type=offline`. 리디렉션 URI는 구글과 같은 `identity.getRedirectURL()`입니다. 갱신 토큰은 `storage.local`의 `ks_dropbox`, 접근 토큰(약 4시간)은 `storage.session`의 `ks_dbx_token`에 둡니다.
+- **호출 시점**: `sync.js`의 `markDone` (반영 완료, 또는 변경 없음). 연결하지 않았으면 아무것도 하지 않습니다. 실패해도 예외를 던지지 않고 `ks_dbx_last`에 기록합니다.
+- **권한**: 앱 폴더 범위만 씁니다. Dropbox API는 CORS를 지원하므로 `host_permissions`를 추가하지 않았습니다.
+- **경로**: `Dropbox-API-Arg` 헤더는 ASCII만 허용하므로 파일 이름은 모두 영문입니다.
+
+### 파일 형식 (`format: 1`)
+
+`knou_agenda.json` — 동기화할 때마다 덮어씀:
+
+```json
+{
+  "format": 1,
+  "generator": "Knou calendar 1.4.0",
+  "savedAt": "2026-11-05T05:00:00.000Z",
+  "semester": "2026-2",
+  "courses": ["행정학개론", "경영학원론"],
+  "items": [
+    { "course": "행정학개론", "kind": "final", "label": "기말평가", "detail": "과제물",
+      "start": "2026-11-10T09:00:00+09:00", "end": "2026-11-20T18:00:00+09:00", "place": "", "due": true }
+  ]
+}
+```
+
+- `kind`: `class`(출석수업), `mid`, `final`, `formative`. `label`은 화면 표시용(`중간평가`, `기말평가`, `기말시험` 등)입니다.
+- `due: true`면 `end`가 마감 시각, `false`면 `start`~`end`가 수업·시험 시간입니다. 시각은 모두 `+09:00`입니다.
+- 형성평가는 `course`가 `형성평가`입니다.
+
+`knou_scope.json` — 없을 때만 만들고 이후로는 사용자가 편집:
+
+```json
+{
+  "format": 1,
+  "semester": "2026-2",
+  "note": "…",
+  "items": [
+    { "course": "행정학개론", "kind": "기말평가", "scope": "" },
+    { "course": "컴퓨터의이해", "kind": "", "scope": "" }
+  ]
+}
+```
+
+- 과목마다 그 학기 평가(중간·기말)별로 한 칸, 평가 정보가 없는 과목은 `kind`가 빈 칸 하나입니다.
+- 이미 있으면 `semester`만 확인합니다. 값이 지금 학기와 다를 때만 `/archive/knou_scope_<학기>.json`으로 옮기고 새로 만듭니다. 값이 없거나 같으면 손대지 않습니다.
+
 ## 파이어폭스 배포
 
 일반 파이어폭스는 서명되지 않은 확장을 영구 설치할 수 없습니다.
@@ -70,3 +125,4 @@ node test\run_test.js "C:\경로\저장한_대시보드.html"
    - 교체는 새 일정을 먼저 넣고 옛 일정을 지우는 순서로 합니다.
    - 지난 학기 일정은 건드리지 않습니다.
 4. 미리보기에서 사용자가 확인하면 반영하고, 팝업의 "남은 일정"을 갱신합니다.
+5. Dropbox를 연결했으면 남은 일정을 `knou_agenda.json`으로 내보내고, `knou_scope.json`이 없으면 양식을 만듭니다.

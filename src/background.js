@@ -35,7 +35,20 @@
     disconnect: () => KS.sync.disconnect(),
     resetCalendar: () => KS.sync.resetCalendar(),
     openOptions: () => ext.runtime.openOptionsPage(),
+    // Dropbox: 화면에 이유를 보여줄 수 있게 오류도 결과로 돌려준다
+    dropboxStatus: () => KS.dropbox.status(),
+    connectDropbox: () => wrap(KS.dropbox.connect),
+    disconnectDropbox: () => wrap(KS.dropbox.disconnect),
+    exportDropbox: () => wrap(() => KS.dropbox.exportAgenda({ quiet: false })),
   };
+
+  async function wrap(fn) {
+    try {
+      return { ok: true, ...((await fn()) || {}) };
+    } catch (e) {
+      return { ok: false, message: String(e?.message || e) };
+    }
+  }
 
   ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const h = handlers[msg?.type];

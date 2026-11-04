@@ -14,6 +14,7 @@ A browser extension that automatically copies **attendance classes, midterm, fin
   - Exam-type assessments: exam time. It is added at the next sync once the date is announced.
   - Formative assessment: study period and deadline.
 - **Change tracking**: detects campus changes, schedule changes, and dropped courses, and replaces or removes only the affected course's events. You review a preview before anything is applied.
+- **Dropbox export for widgets (optional)**: after each sync, saves the upcoming task list to `knou_agenda.json` in a Dropbox app folder and creates a `knou_scope.json` template for writing assignment topics and exam scope. A widget such as an iPad Scriptable widget can read these files to show schedules and scope together.
 - **Upcoming tasks**: the extension popup lists remaining tasks per course with a D-day counter, and each item links to the matching KNOU page.
 - **Safety**
   - Events you created yourself and events from past semesters are never touched.
@@ -57,9 +58,28 @@ After that, just use **동기화 확인 → 반영** whenever your schedule chan
 - The extension's Google app is currently in **testing mode**. Only Gmail accounts added as test users by the developer can connect. Other accounts get an `access_denied` error. To use it, ask the developer to add you, or create [your own OAuth client](docs/DEVELOPER.md).
 - The permission scope is limited to **calendars created by this extension**. It cannot read or change your other calendars.
 
+### Dropbox export (optional)
+
+Use this only if you want a widget to show schedules together with assignment or exam scope. Nothing changes if you don't set it up.
+
+1. In the [Dropbox App Console](https://www.dropbox.com/developers/apps), choose **Create app** → **Scoped access** → **App folder**, and give it a name (e.g. `KnouWidget`).
+2. On the **Permissions** tab, check `files.content.read` and `files.content.write`, then click **Submit**.
+3. On the **Settings** tab, add the address shown in the extension's Settings → **4. Dropbox 내보내기** to **Redirect URIs**. (Chromium browsers: `https://akolhboefakmfcodlklbicmaiplebfgp.chromiumapp.org/`)
+4. Paste the **App key** from the same tab into the extension settings, click **연결** (Connect), and allow access in the Dropbox window.
+
+Once connected, every sync writes two files to `Apps\<app name>\` in your Dropbox (on Windows: `%USERPROFILE%\Dropbox\Apps\<app name>\`).
+
+| File | Contents | Who edits it |
+| --- | --- | --- |
+| `knou_agenda.json` | The same list as the popup's upcoming tasks (course, kind, start/deadline, place) | Overwritten by the extension on every sync |
+| `knou_scope.json` | A scope template with midterm/final slots per course | You (the extension only creates it when it is missing) |
+
+When the semester changes, the old `knou_scope.json` is moved to `archive\knou_scope_<semester>.json` and a new template is created. If you remove the `semester` value from the file, the extension treats it as yours and never moves it.
+
 ## Privacy
 
-- Data read from KNOU is stored **only in your browser and your own Google Calendar**. Nothing is sent to any other server.
+- Data read from KNOU is stored **only in your browser and your own Google Calendar**, plus your own Dropbox app folder if you turn on the Dropbox export. Nothing is sent to any other server.
+- The Dropbox app-folder permission only reaches that one folder; the extension cannot read your other Dropbox files.
 - Calendar events contain only course names, times, places, and instructor contact details that are already published on the KNOU page.
 - The **bug report** file (Settings → 버그 리포트 저장) does not include your name, student ID, email, or course list.
 

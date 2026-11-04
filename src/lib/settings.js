@@ -13,6 +13,7 @@
     deadlineReminders: '1440,180', // 마감 알림(분 전)
     autoApply: false, // 미리보기 없이 바로 반영
     placeOverrides: {}, // 장소 원문 → 정식 명칭
+    dropboxAppKey: '', // 위젯용 Dropbox 내보내기 (직접 만든 Dropbox 앱의 App key)
   };
 
   KS.getSettings = async () => {

@@ -10,7 +10,7 @@ const GECKO_ID = 'knou_calendar@yonggary.local';
 
 const BACKGROUND = [
   'lib/env.js', 'lib/core.js', 'lib/settings.js', 'lib/log.js', 'lib/nuxt.js',
-  'lib/schedule.js', 'lib/knou.js', 'lib/gauth.js', 'lib/gcal.js', 'lib/sync.js', 'background.js',
+  'lib/schedule.js', 'lib/knou.js', 'lib/gauth.js', 'lib/gcal.js', 'lib/dropbox.js', 'lib/sync.js', 'background.js',
 ];
 const SKIP = new Set(['manifest.base.json', 'chromium_key.txt', 'config.json']);
 
@@ -46,7 +46,8 @@ for (const target of ['chromium', 'firefox']) {
 
   const m = JSON.parse(JSON.stringify(base));
   if (target === 'chromium') {
-    m.key = key; // 확장 ID 고정 → 리디렉션 URI가 바뀌지 않음
+    if (key) m.key = key; // 확장 ID 고정 → 리디렉션 URI가 바뀌지 않음
+    else console.warn('경고: src/chromium_key.txt가 비어 있습니다. 확장 ID가 고정되지 않아 구글·Dropbox 리디렉션 URI가 달라집니다.');
     m.minimum_chrome_version = '116';
     m.background = { service_worker: 'sw.js' };
     fs.writeFileSync(path.join(out, 'sw.js'), `importScripts(${BACKGROUND.map((f) => JSON.stringify(f)).join(', ')});\n`);

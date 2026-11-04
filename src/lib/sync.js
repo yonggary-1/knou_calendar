@@ -53,6 +53,9 @@
     await commitAgenda();
     const now = Date.now();
     await KS.ext.storage.local.set({ ks_last: now });
+    // 위젯용 Dropbox 내보내기 (연결했을 때만). 실패해도 동기화 결과는 그대로 둔다
+    const dbx = await KS.dropbox.exportAgenda();
+    if (dbx?.ok === false) message += ' (Dropbox 내보내기 실패 — 설정에서 확인하세요)';
     return State.set({ phase: 'done', message, plan: null, progress: null, error: null, lastSync: now });
   }
 
@@ -130,7 +133,9 @@
 
       const built = KS.schedule.build(knou, settings);
       await KS.ext.storage.local.set({ ks_places: built.places });
-      await KS.ext.storage.session.set({ ks_agenda_pending: { items: built.agenda, savedAt: Date.now() } });
+      await KS.ext.storage.session.set({
+        ks_agenda_pending: { items: built.agenda, savedAt: Date.now(), semester: built.semesters[0] || '', courses: knou.courses.map((c) => c.name) },
+      });
       const plan = KS.schedule.diff(built, existing);
       KS.log('info', '변경 계획', { source: knou.source, courses: built.courseCount, groups: built.groups.length, existing: existing.length, ...plan.counts });
 

@@ -57,8 +57,31 @@
       <div id="places"></div>
     </section>
 
+    <section class="card">
+      <h2>4. Dropbox 내보내기 <span class="muted small">(위젯용, 선택)</span></h2>
+      <p class="muted">동기화할 때마다 남은 일정을 Dropbox 앱 폴더의 <code>knou_agenda.json</code>에 저장합니다. 범위 메모 양식 <code>knou_scope.json</code>은 파일이 없을 때만 만들고, 이후로는 고치지 않습니다. 아이패드 Scriptable 위젯 등이 이 파일을 읽습니다.</p>
+      <label class="field">
+        <span>Dropbox 앱 키 (App key)</span>
+        <input type="text" id="dropboxAppKey" placeholder="직접 만든 Dropbox 앱(App folder)의 App key" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="field">
+        <span>Dropbox 앱의 Redirect URI에 등록할 주소</span>
+        <div class="copyrow">
+          <input type="text" id="dbxRedirect" readonly>
+          <button id="btnCopyDbx">복사</button>
+        </div>
+      </label>
+      <div class="inline gap">
+        <span class="muted">상태:</span> <b id="dbxAccount">연결 안 됨</b>
+        <button id="btnDbxConnect">연결</button>
+        <button id="btnDbxExport" hidden>지금 내보내기</button>
+        <button id="btnDbxDisconnect" class="link" hidden>연결 해제</button>
+      </div>
+      <p class="muted small" id="dbxLast"></p>
+    </section>
+
     <details class="card" id="advanced">
-      <summary><h2>4. 고급</h2></summary>
+      <summary><h2>5. 고급</h2></summary>
       <div class="adv">
         <p class="muted" id="builtinInfo"></p>
         <label class="field">
@@ -88,7 +111,7 @@
     </div>
 
     <section class="card">
-      <h2>5. 문제 해결</h2>
+      <h2>6. 문제 해결</h2>
       <div class="inline gap">
         <button id="btnReport">버그 리포트 저장</button>
         <span class="muted small">이름·학번·이메일은 들어가지 않습니다.</span>

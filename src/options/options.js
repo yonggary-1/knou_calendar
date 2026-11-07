@@ -53,11 +53,10 @@
     const s = (await send('dropboxStatus')) || {};
     $('dbxAccount').textContent = s.connected ? `연결됨${s.email ? ' · ' + s.email : ''}` : '연결 안 됨';
     $('btnDbxConnect').textContent = s.connected ? '다시 연결' : '연결';
-    $('btnDbxExport').hidden = !s.connected;
     $('btnDbxDisconnect').hidden = !s.connected;
     const l = s.last;
     $('dbxLast').textContent = note
-      || (!l ? (s.connected ? '아직 내보낸 적이 없습니다. 동기화하거나 [지금 내보내기]를 누르세요.' : '')
+      || (!l ? (s.connected ? '아직 내보낸 적이 없습니다. 팝업에서 [동기화 확인 & Dropbox 내보내기]를 누르세요.' : '')
         : l.ok ? `마지막 내보내기 ${KS.fmtTime(l.at)} · 일정 ${l.items}건 · ${SCOPE_TEXT[l.scope] || ''}`
         : `마지막 내보내기 실패 ${KS.fmtTime(l.at)} — ${l.message}`);
   }
@@ -67,15 +66,9 @@
     settings = await KS.saveSettings({ dropboxAppKey: $('dropboxAppKey').value.trim() });
     if (!KS.effectiveDropboxKey(settings)) { $('advanced').open = true; await showDropbox('이 빌드에는 Dropbox 앱 키가 없습니다. 고급에서 앱 키를 입력하세요.'); return; }
     await showDropbox('Dropbox 창에서 허용을 눌러 주세요…');
-    const r = await send('connectDropbox');
+    const r = await send('connectDropbox'); // 연결 + 숨김 해제 + 바로 한 번 내보내기 (background.js)
     if (!r?.ok) { await showDropbox(r?.message || 'Dropbox 연결에 실패했습니다.'); return; }
-    const x = await send('exportDropbox');
-    await showDropbox(x?.ok === false ? x.message : undefined);
-  };
-  $('btnDbxExport').onclick = async () => {
-    await showDropbox('내보내는 중…');
-    const r = await send('exportDropbox');
-    await showDropbox(r?.ok === false ? r.message : r?.skipped ? '내보낼 일정이 없습니다. 먼저 동기화하세요.' : undefined);
+    await showDropbox(r.exported?.ok === false ? r.exported.message : undefined);
   };
   $('btnDbxDisconnect').onclick = async () => {
     if (!confirm('Dropbox 연결을 해제할까요? Dropbox에 있는 파일은 그대로 남습니다.')) return;

@@ -69,7 +69,7 @@
       const msg = String(e?.message || e);
       KS.log('warn', '구글 인증 창 실패', { interactive, msg });
       if (msg === 'flow_busy' || /only one web auth flow/i.test(msg)) {
-        throw new KS.KsError('GOOGLE_CANCELLED', '이전 구글 로그인 창이 아직 열려 있습니다. 그 창을 완료하거나 닫은 뒤 다시 시도하세요. 창이 보이지 않으면 확장 관리 화면에서 확장을 새로고침하세요.');
+        throw new KS.KsError('GOOGLE_CANCELLED', '이전 로그인 창(구글·Dropbox)이 아직 열려 있습니다. 오류 화면이 떠 있는 창이 있으면 닫고 다시 시도하세요. 창이 보이지 않으면 확장 관리 화면에서 Knou calendar를 새로고침(↻)하세요. 설정과 연결은 그대로 남습니다.');
       }
       if (!interactive) throw new KS.KsError('NEED_GOOGLE', '구글 연결이 필요합니다.');
       if (msg.startsWith('timeout')) {

@@ -4,12 +4,13 @@
   const ext = KS.ext;
 
   async function status() {
-    const [state, account, last, perm, settings] = await Promise.all([
+    const [state, account, last, perm, settings, dropbox] = await Promise.all([
       KS.sync.getStatus(),
       KS.gauth.getAccount(),
       ext.storage.local.get(['ks_last', 'ks_agenda']),
       ext.permissions.contains({ origins: KS.KNOU_ORIGINS }),
       KS.getSettings(),
+      KS.dropbox.status(),
     ]);
     return {
       state,
@@ -18,6 +19,8 @@
       agenda: last.ks_agenda || null,
       hasPermission: perm,
       hasClientId: !!KS.effectiveClientId(settings),
+      // 연결되어 있으면 숨김 설정과 관계없이 항상 보인다
+      dropbox: { ...dropbox, hidden: !dropbox.connected && !!settings.dropboxHidden, hasKey: !!KS.effectiveDropboxKey(settings) },
       target: KS.env.target,
       version: KS.env.version,
     };
@@ -37,7 +40,19 @@
     openOptions: () => ext.runtime.openOptionsPage(),
     // Dropbox: 화면에 이유를 보여줄 수 있게 오류도 결과로 돌려준다
     dropboxStatus: () => KS.dropbox.status(),
-    connectDropbox: () => wrap(KS.dropbox.connect),
+    // 연결은 팝업·설정 어디서 눌러도 여기서 끝까지 진행된다 (인증 창이 뜨며 팝업이 닫혀도 계속됨)
+    connectDropbox: () =>
+      wrap(async () => {
+        const r = await KS.dropbox.connect();
+        await KS.saveSettings({ dropboxHidden: false }); // 숨겨 두었어도 연결하면 팝업에 다시 보임
+        const x = await KS.dropbox.exportAgenda({ quiet: false }); // 남은 일정이 있으면 바로 한 번 내보냄
+        return { ...r, exported: x };
+      }),
+    hideDropbox: async () => {
+      await KS.saveSettings({ dropboxHidden: true });
+      KS.log('info', 'Dropbox 줄 숨김 (사용 안 함)');
+      return { ok: true };
+    },
     disconnectDropbox: () => wrap(KS.dropbox.disconnect),
     exportDropbox: () => wrap(() => KS.dropbox.exportAgenda({ quiet: false })),
   };

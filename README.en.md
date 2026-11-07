@@ -62,8 +62,12 @@ After that, just use **동기화 확인 → 반영** whenever your schedule chan
 
 Use this only if you want a widget to show schedules together with assignment or exam scope. Nothing changes if you don't set it up.
 
-1. Open the extension settings → **4. Dropbox 내보내기** (Dropbox export) → click **연결** (Connect).
+1. Click **연결** (Connect) on the **Dropbox** row of the popup. The **연결** button in Settings → **4. Dropbox 내보내기** does the same.
 2. Click **Allow** in the Dropbox window. The Dropbox app key is built into the extension, so there is nothing to enter.
+
+Once connected, the popup button becomes **동기화 확인 & Dropbox 내보내기** (Check sync & export to Dropbox). That one button syncs the calendar and exports. If the export fails, the dot on the Dropbox row turns red; press the button again to retry.
+
+If you don't use Dropbox, click **사용 안 함** (Don't use) in the popup. The Dropbox row disappears; connecting later from Settings → 4 brings it back.
 
 Once connected, every sync writes two files to the app's own folder under `Apps` in your Dropbox (on Windows, under `%USERPROFILE%\Dropbox\Apps\`).
 

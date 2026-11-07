@@ -69,6 +69,9 @@ node test\dropbox_test.js
 
 `lib/dropbox.js`가 담당합니다. 앱 키는 `src/config.json`의 `dropboxAppKey`로 내장하고(`build.js`가 `KS.env.dropboxAppKey`로 넣음), 설정 → 고급의 `settings.dropboxAppKey`가 있으면 그쪽을 씁니다(`KS.effectiveDropboxKey`). PKCE 방식이라 앱 시크릿은 어디에도 넣지 않습니다.
 
+- **화면**: 팝업 연결 상태의 세 번째 줄(`#dbxRow`)이 Dropbox입니다. 연결 안 됨이면 [연결]·[사용 안 함], 연결됨이면 [연결 해제]가 보입니다. 연결됨이면 주 버튼 이름이 `동기화 확인 & Dropbox 내보내기`가 됩니다. 내보내기는 `markDone`에서 자동으로 실행되므로 별도 버튼은 없습니다.
+- **숨김**: [사용 안 함] → `settings.dropboxHidden = true`(`hideDropbox` 메시지). 백그라운드 `status()`의 `dropbox.hidden`은 **연결 안 됨이면서 숨김일 때만** 참입니다. `connectDropbox`가 성공하면 숨김을 풀고 바로 `exportAgenda`를 한 번 부릅니다. 이 처리는 백그라운드에서 하므로 팝업이 닫혀도 끝까지 진행됩니다.
+
 ### 내장 Dropbox 앱 (htxa03bfx70wl6i)
 
 [Dropbox App Console](https://www.dropbox.com/developers/apps)에 만든 **Scoped access · App folder** 앱입니다.

@@ -60,11 +60,10 @@
     <section class="card">
       <h2>4. Dropbox 내보내기 <span class="muted small">(위젯용, 선택)</span></h2>
       <p class="muted">동기화할 때마다 남은 일정을 Dropbox 앱 폴더의 <code>knou_agenda.json</code>에 저장합니다. 범위 메모 양식 <code>knou_scope.json</code>은 파일이 없을 때만 만들고, 이후로는 고치지 않습니다. 아이패드 Scriptable 위젯 등이 이 파일을 읽습니다.</p>
-      <p class="muted small">[연결]을 누르면 Dropbox 로그인 창이 열립니다. 확장은 Dropbox의 <code>Apps</code> 폴더 아래 앱 전용 폴더 하나에만 접근할 수 있습니다.</p>
+      <p class="muted small">[연결]을 누르면 Dropbox 로그인 창이 열립니다. 확장은 Dropbox의 <code>Apps</code> 폴더 아래 앱 전용 폴더 하나에만 접근할 수 있습니다. 연결하면 팝업에 Dropbox 줄이 나타나고, 동기화 버튼이 내보내기까지 함께 합니다. 팝업에서 [사용 안 함]으로 숨겼어도 여기서 연결하면 다시 나타납니다.</p>
       <div class="inline gap">
         <span class="muted">상태:</span> <b id="dbxAccount">연결 안 됨</b>
         <button id="btnDbxConnect">연결</button>
-        <button id="btnDbxExport" hidden>지금 내보내기</button>
         <button id="btnDbxDisconnect" class="link" hidden>연결 해제</button>
       </div>
       <p class="muted small" id="dbxLast"></p>

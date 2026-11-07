@@ -10,12 +10,17 @@ body { width: 360px; min-height: 200px; }
 
 .status { padding: 8px 12px; display: grid; gap: 4px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .row { display: flex; align-items: center; gap: 8px; min-height: 24px; }
-.row .label { width: 44px; color: var(--muted); font-size: 12px; }
+.row .label { width: 56px; color: var(--muted); font-size: 12px; }
 .row .value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; }
 .dot.ok { background: var(--ok); }
 .dot.warn { background: var(--warn); }
 .dot.bad { background: var(--bad); }
+.dot.off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.row .value.muted { color: var(--muted); }
+.row .link + .link { margin-left: -4px; }
+.row .link.dim { color: var(--muted); font-weight: 500; }
+.row[hidden] { display: none; }
 
 .panel { padding: 14px 12px 12px; display: grid; gap: 12px; }
 .panel h2 { margin: 0; font-size: 14px; font-weight: 700; }

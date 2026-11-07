@@ -106,7 +106,55 @@
     $('googleText').textContent = email || '연결 안 됨';
     $('btnGoogle').textContent = email ? '계정 변경' : '연결';
     $('btnGoogle').onclick = email ? act('switchAccount') : act('connectGoogle');
+
+    // ---- Dropbox (선택) ----
+    const d = st.dropbox || {};
+    $('dbxRow').hidden = !!d.hidden || (!d.connected && !d.hasKey);
+    if (d.connected) {
+      const failed = d.last && d.last.ok === false;
+      $('dbxDot').className = 'dot ' + (failed ? 'bad' : 'ok');
+      $('dbxText').className = 'value';
+      $('dbxText').textContent = failed
+        ? '내보내기 실패 (마우스를 올리면 이유)'
+        : [d.email || '연결됨', d.last?.at ? fmtClock(d.last.at) : ''].filter(Boolean).join(' · ');
+      $('dbxText').title = failed ? d.last.message || '' : '';
+      $('btnDbx').textContent = '연결 해제';
+      $('btnDbx').className = 'link dim';
+      $('btnDbx').onclick = async () => {
+        if (!confirm('Dropbox 연결을 해제할까요? Dropbox에 있는 파일은 그대로 남습니다.')) return;
+        await act('disconnectDropbox')();
+      };
+      $('btnDbxHide').hidden = true;
+    } else {
+      $('dbxDot').className = 'dot off';
+      $('dbxText').className = 'value muted';
+      $('dbxText').textContent = dbxNote || '선택 사항 · 위젯용';
+      $('dbxText').title = '';
+      $('btnDbx').textContent = '연결';
+      $('btnDbx').className = 'link';
+      $('btnDbx').onclick = async () => {
+        dbxNote = 'Dropbox 창에서 허용을 눌러 주세요…';
+        lastKey = '';
+        refresh();
+        dbxError = '';
+        const r = await send('connectDropbox'); // 인증 창이 뜨며 팝업이 닫혀도 백그라운드에서 끝까지 진행됨
+        dbxNote = '';
+        if (r && r.ok === false) dbxError = r.message; // 긴 안내는 아래 본문에 표시
+        lastKey = '';
+        refresh();
+      };
+      $('btnDbxHide').hidden = false;
+      $('btnDbxHide').onclick = act('hideDropbox');
+    }
   }
+
+  let dbxNote = '';
+  let dbxError = '';
+  const fmtClock = (ms) => {
+    const t = new Date(ms), p = (n) => String(n).padStart(2, '0');
+    const today = new Date().toDateString() === t.toDateString();
+    return (today ? '' : `${t.getMonth() + 1}/${t.getDate()} `) + `${p(t.getHours())}:${p(t.getMinutes())}`;
+  };
 
   function notice(kind, title, body) {
     return h('div', { class: 'notice ' + (kind || '') }, h('div', { class: 'title' }, title), body ? h('p', { class: 'muted' }, body) : null);
@@ -132,6 +180,7 @@
 
   function render(st) {
     const nodes = renderPhase(st);
+    if (dbxError) nodes.unshift(notice('bad', 'Dropbox 연결이 완료되지 않았습니다', dbxError));
     const phase = st.state?.phase || 'idle';
     if (st.hasPermission && (WITH_AGENDA.has(phase) || !phase)) nodes.push(...agendaView(st.agenda));
     return nodes;
@@ -212,7 +261,7 @@
       default: {
         if (s.phase === 'done' && s.message) nodes.push(notice('', s.message));
         else if (s.message) nodes.push(h('p', { class: 'muted' }, s.message));
-        nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: act('preview') }, '동기화 확인')));
+        nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: act('preview') }, st.dropbox?.connected ? '동기화 확인 & Dropbox 내보내기' : '동기화 확인')));
         nodes.push(h('p', { class: 'foot' }, st.lastSync ? `마지막 동기화 ${fmtTime(st.lastSync)}` : '아직 동기화한 적이 없습니다.'));
       }
     }
@@ -225,7 +274,7 @@
       panel.replaceChildren(notice('bad', '확장 백그라운드에 연결할 수 없습니다', '확장을 다시 불러와 주세요.'));
       return;
     }
-    const key = JSON.stringify([st.state, st.account, st.hasPermission, st.lastSync, st.agenda?.savedAt, Math.floor(Date.now() / 60000)]);
+    const key = JSON.stringify([st.state, st.account, st.hasPermission, st.lastSync, st.agenda?.savedAt, st.dropbox, dbxNote, dbxError, Math.floor(Date.now() / 60000)]);
     if (key === lastKey) return;
     lastKey = key;
     setStatus(st);

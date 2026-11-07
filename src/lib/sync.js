@@ -78,7 +78,8 @@
     await KS.ext.storage.local.set({ ks_last: now });
     // 위젯용 Dropbox 내보내기 (연결했을 때만). 실패하거나 응답이 늦어도 동기화 결과는 그대로 둔다
     const dbx = await exportWithLimit();
-    if (dbx?.ok === false) message += ' (Dropbox 내보내기 실패 — 설정에서 확인하세요)';
+    if (dbx?.ok === false) message += ' (Dropbox 내보내기 실패 — 버튼을 다시 누르면 다시 시도합니다)';
+    else if (dbx?.ok) message += ' · Dropbox에 내보냈습니다.';
     return State.set({ phase: 'done', message, plan: null, progress: null, error: null, lastSync: now });
   }
 

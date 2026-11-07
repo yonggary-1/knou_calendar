@@ -1,16 +1,15 @@
-## Knou calendar v1.4.1 — Fixes for 1.4.0
+## Knou calendar v1.4.2 — Simpler Dropbox connection
 
-The Dropbox export from 1.4.0 is unchanged. This release fixes packaging and stability.
+The Dropbox app key is now built into the extension. You no longer need to create your own Dropbox app: just click [연결] (Connect) in Settings to use the Dropbox export for widgets.
 
-### Fixes
-- The **Chromium package layout** is back to the 1.3.0 form. Extracting it creates a `knou_calendar_chromium` folder; select that folder with "Load unpacked".
-- Opening the Dropbox connection window while a Google sign-in window is open no longer fails with an error. You now get a message telling you what to do.
-- If Dropbox stops responding, the sync is marked complete after 30 seconds, so the calendar sync no longer gets stuck at "applying".
+### Changes
+- Settings → **4. Dropbox 내보내기** (Dropbox export) now shows only the connection status and the Connect, Export now, and Disconnect buttons.
+- The app key field and redirect address for using your own Dropbox app moved to Settings → **5. 고급** (Advanced). A key entered there takes precedence over the built-in key.
 
 ### Assets
-- `knou_calendar_chromium.zip`: for Chrome, Edge, Whale, and Opera. Extract it and install the `knou_calendar_chromium` folder with "Load unpacked", or overwrite your existing folder and reload the extension.
+- `knou_calendar_chromium.zip`: for Chrome, Edge, Whale, and Opera. Extract it and load the `knou_calendar_chromium` folder with "Load unpacked", or overwrite your existing folder and reload the extension.
 - `knou_calendar_firefox.zip`: package for Mozilla signing (Firefox).
 
 ### Notes
-- Your settings and connections (Google, Dropbox) are kept.
-- To use Dropbox on Firefox, also register **the address shown in the Firefox settings page** under Redirect URIs in your Dropbox app. It differs from the Chromium address.
+- Your settings and connections (Google and Dropbox) are kept. If you connected with your own app key in 1.4.0–1.4.1, that connection keeps working.
+- The extension's Dropbox app is still in development status, so the number of users who can connect is limited.

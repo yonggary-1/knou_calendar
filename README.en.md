@@ -62,17 +62,17 @@ After that, just use **동기화 확인 → 반영** whenever your schedule chan
 
 Use this only if you want a widget to show schedules together with assignment or exam scope. Nothing changes if you don't set it up.
 
-1. In the [Dropbox App Console](https://www.dropbox.com/developers/apps), choose **Create app** → **Scoped access** → **App folder**, and give it a name (e.g. `KnouWidget`).
-2. On the **Permissions** tab, check `files.content.read` and `files.content.write`, then click **Submit**.
-3. On the **Settings** tab, add the address shown in the extension's Settings → **4. Dropbox 내보내기** to **Redirect URIs**. (Chromium browsers: `https://akolhboefakmfcodlklbicmaiplebfgp.chromiumapp.org/`)
-4. Paste the **App key** from the same tab into the extension settings, click **연결** (Connect), and allow access in the Dropbox window.
+1. Open the extension settings → **4. Dropbox 내보내기** (Dropbox export) → click **연결** (Connect).
+2. Click **Allow** in the Dropbox window. The Dropbox app key is built into the extension, so there is nothing to enter.
 
-Once connected, every sync writes two files to `Apps\<app name>\` in your Dropbox (on Windows: `%USERPROFILE%\Dropbox\Apps\<app name>\`).
+Once connected, every sync writes two files to the app's own folder under `Apps` in your Dropbox (on Windows, under `%USERPROFILE%\Dropbox\Apps\`).
 
 | File | Contents | Who edits it |
 | --- | --- | --- |
 | `knou_agenda.json` | The same list as the popup's upcoming tasks (course, kind, start/deadline, place) | Overwritten by the extension on every sync |
 | `knou_scope.json` | A scope template with midterm/final slots per course | You (the extension only creates it when it is missing) |
+
+The extension's Dropbox app is still in **development status**, so the number of users who can connect is limited. If the connection is refused, you can enter the key of [your own Dropbox app](docs/DEVELOPER.md) in Settings → 고급 (Advanced).
 
 When the semester changes, the old `knou_scope.json` is moved to `archive\knou_scope_<semester>.json` and a new template is created. If you remove the `semester` value from the file, the extension treats it as yours and never moves it.
 

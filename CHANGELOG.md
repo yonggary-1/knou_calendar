@@ -2,6 +2,12 @@
 
 v1.3.0이 GitHub에 올린 첫 릴리즈입니다. 그 이전 버전은 공개 전 개발 과정에서만 쓰였습니다.
 
+## 1.4.2
+- Dropbox 앱 키(`htxa03bfx70wl6i`)를 구글 클라이언트 ID처럼 확장에 내장했습니다(`src/config.json` → `KS.env.dropboxAppKey`). 설정에서 [연결]만 누르면 됩니다.
+- 직접 만든 Dropbox 앱 키 입력칸과 리디렉션 주소는 설정 → 고급으로 옮겼습니다. 입력하면 내장 키보다 우선합니다.
+- 이미 직접 만든 앱 키로 연결한 경우 그 연결은 그대로 유지됩니다.
+- `test/dropbox_test.js`에 앱 키 우선순위 점검을 추가했습니다(9개).
+
 ## 1.4.1
 - `node build.js`가 릴리즈 첨부 zip 두 개(`dist\knou_calendar_chromium.zip`, `dist\knou_calendar_firefox.zip`)까지 만들도록 했습니다(`tools/pack.js`). 1.4.0에서 손으로 묶으며 달라졌던 Chromium zip 구조를 1.3.0과 같게 되돌렸습니다. 압축을 풀면 `knou_calendar_chromium` 폴더가 생깁니다.
 - Dropbox 연결 창이 구글 로그인 창과 같은 잠금·시간 제한(5분)을 쓰도록 했습니다. 두 창이 겹칠 때 "Only one web auth flow" 오류 대신 안내 문구가 나옵니다.

@@ -12,7 +12,7 @@
   const SCOPE_PATH = '/knou_scope.json';
   const FORMAT = 1;
 
-  const appKeyOf = (s) => String(s?.dropboxAppKey || '').trim();
+  const appKeyOf = (s) => KS.effectiveDropboxKey(s); // 직접 입력한 키 > 내장 키
 
   // ---------- PKCE ----------
   const b64url = (bytes) => {
@@ -54,7 +54,7 @@
   async function connect() {
     const settings = await KS.getSettings();
     const appKey = appKeyOf(settings);
-    if (!appKey) throw new KS.KsError('NEED_CONFIG', 'Dropbox 앱 키를 먼저 입력하고 저장하세요.');
+    if (!appKey) throw new KS.KsError('NEED_CONFIG', '이 빌드에는 Dropbox 앱 키가 없습니다. 설정 > 고급에서 입력하세요.');
     const { verifier, challenge } = await pkce();
     const state = crypto.randomUUID();
     const redirectUri = KS.ext.identity.getRedirectURL();

@@ -62,17 +62,17 @@
 
 위젯에서 일정과 레포트·시험 범위를 함께 보고 싶을 때만 씁니다. 쓰지 않으면 아무것도 바뀌지 않습니다.
 
-1. [Dropbox App Console](https://www.dropbox.com/developers/apps)에서 **Create app** → **Scoped access** → **App folder**를 고르고 이름(예: `KnouWidget`)을 정합니다.
-2. **Permissions** 탭에서 `files.content.read`, `files.content.write`를 체크하고 **Submit**을 누릅니다.
-3. **Settings** 탭의 **Redirect URIs**에 확장 설정 → **4. Dropbox 내보내기**에 표시된 주소를 추가합니다. (Chrome 계열: `https://akolhboefakmfcodlklbicmaiplebfgp.chromiumapp.org/`)
-4. 같은 탭의 **App key**를 확장 설정에 붙여넣고 **연결**을 누른 뒤, Dropbox 창에서 허용합니다.
+1. 확장 설정 → **4. Dropbox 내보내기** → **연결**을 누릅니다.
+2. Dropbox 로그인 창에서 **허용**을 누릅니다. 확장에 Dropbox 앱 키가 내장되어 있어 따로 입력할 것은 없습니다.
 
-연결하면 동기화할 때마다 Dropbox의 `Apps\<앱 이름>\` 폴더에 두 파일이 생깁니다. 윈도에서는 `%USERPROFILE%\Dropbox\Apps\<앱 이름>\`입니다.
+연결하면 동기화할 때마다 Dropbox의 `Apps` 폴더 아래 앱 전용 폴더에 두 파일이 생깁니다. 윈도에서는 `%USERPROFILE%\Dropbox\Apps\` 아래에 있습니다.
 
 | 파일 | 내용 | 누가 고치나 |
 | --- | --- | --- |
 | `knou_agenda.json` | 팝업의 남은 일정과 같은 목록 (과목, 종류, 시작·마감 시각, 장소) | 확장이 동기화할 때마다 덮어씀 |
 | `knou_scope.json` | 과목별 중간·기말 칸이 있는 범위 메모 양식 | 사용자 (확장은 파일이 없을 때만 만듦) |
+
+확장의 Dropbox 앱은 아직 **개발 단계**라 연결할 수 있는 사용자 수에 제한이 있습니다. 연결이 거부되면 [직접 만든 Dropbox 앱](docs/DEVELOPER.md)의 키를 설정 → 고급에 넣어 쓸 수 있습니다.
 
 학기가 바뀌면 옛 `knou_scope.json`은 `archive\knou_scope_<학기>.json`으로 옮기고 새 양식을 만듭니다. 파일 안의 `semester` 값을 지우면 확장은 그 파일을 사용자 것으로 보고 옮기지 않습니다.
 

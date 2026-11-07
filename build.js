@@ -33,6 +33,13 @@ if (clientId && !/\.apps\.googleusercontent\.com$/.test(clientId)) {
   process.exit(1);
 }
 console.log(clientId ? `내장 클라이언트 ID: ${clientId.slice(0, 12)}…` : '경고: 내장 클라이언트 ID 없음 (설정 > 고급에서 입력해야 동작)');
+// Dropbox 앱 키: 공개해도 되는 값 (PKCE 방식이라 앱 시크릿은 쓰지 않음)
+const dropboxAppKey = String(config.dropboxAppKey || '').trim();
+if (dropboxAppKey && !/^[a-z0-9]{10,20}$/i.test(dropboxAppKey)) {
+  console.error('config.json의 dropboxAppKey 형식이 이상합니다: ' + dropboxAppKey);
+  process.exit(1);
+}
+console.log(dropboxAppKey ? `내장 Dropbox 앱 키: ${dropboxAppKey}` : '경고: 내장 Dropbox 앱 키 없음 (설정 > 고급에서 입력해야 Dropbox 내보내기 동작)');
 
 for (const target of ['chromium', 'firefox']) {
   const out = path.join(DIST, target);
@@ -41,7 +48,7 @@ for (const target of ['chromium', 'firefox']) {
 
   fs.writeFileSync(
     path.join(out, 'lib', 'env.js'),
-    `globalThis.KS = globalThis.KS || {};\nglobalThis.KS.env = ${JSON.stringify({ target, version: base.version, clientId })};\n`
+    `globalThis.KS = globalThis.KS || {};\nglobalThis.KS.env = ${JSON.stringify({ target, version: base.version, clientId, dropboxAppKey })};\n`
   );
 
   const m = JSON.parse(JSON.stringify(base));

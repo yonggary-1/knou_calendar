@@ -167,10 +167,18 @@ const agenda = (semester) => ({
   await assert.rejects(() => KS.dropbox.exportAgenda({ quiet: false }));
   out('[7] 연결 만료 → 실패 기록, 동기화는 계속 통과');
 
-  // ---- 8. 연결 해제 ----
+  // ---- 8. 앱 키: 직접 입력한 키가 내장 키보다 우선 ----
+  KS.env.dropboxAppKey = 'BUILTIN';
+  assert.strictEqual(KS.effectiveDropboxKey({ dropboxAppKey: '' }), 'BUILTIN');
+  assert.strictEqual(KS.effectiveDropboxKey({ dropboxAppKey: ' MINE ' }), 'MINE');
+  KS.env.dropboxAppKey = '';
+  assert.strictEqual(KS.effectiveDropboxKey({}), '');
+  out('[8] 내장 앱 키 / 직접 입력 키 우선순위 통과');
+
+  // ---- 9. 연결 해제 ----
   await KS.dropbox.disconnect();
   assert.strictEqual((await KS.dropbox.status()).connected, false);
-  out('[8] 연결 해제 통과');
+  out('[9] 연결 해제 통과');
 
   out('모든 Dropbox 점검 통과');
 })().catch((e) => { console.error(e); process.exit(1); });

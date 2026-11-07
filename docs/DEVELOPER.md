@@ -67,7 +67,25 @@ node test\dropbox_test.js
 
 ## Dropbox 내보내기 (위젯용)
 
-`lib/dropbox.js`가 담당합니다. 사용자가 직접 만든 Dropbox 앱의 앱 키(`settings.dropboxAppKey`)로 연결하며, 앱 시크릿은 쓰지 않습니다.
+`lib/dropbox.js`가 담당합니다. 앱 키는 `src/config.json`의 `dropboxAppKey`로 내장하고(`build.js`가 `KS.env.dropboxAppKey`로 넣음), 설정 → 고급의 `settings.dropboxAppKey`가 있으면 그쪽을 씁니다(`KS.effectiveDropboxKey`). PKCE 방식이라 앱 시크릿은 어디에도 넣지 않습니다.
+
+### 내장 Dropbox 앱 (htxa03bfx70wl6i)
+
+[Dropbox App Console](https://www.dropbox.com/developers/apps)에 만든 **Scoped access · App folder** 앱입니다.
+
+- Permissions: `files.content.read`, `files.content.write`
+- Redirect URIs (두 개 모두 등록)
+  - Chromium 계열: `https://akolhboefakmfcodlklbicmaiplebfgp.chromiumapp.org/` (`chromium_key.txt`로 고정된 ID)
+  - Firefox: `https://1d7b9eef5f79d53ebe1a136a2d2775845bb15396.extensions.allizom.org/` (`knou_calendar@yonggary.local`의 SHA-1)
+- 개발 단계(Development) 앱이라 연결할 수 있는 사용자 수에 제한이 있습니다. 배포 범위가 넓어지면 Dropbox에 Production 신청이 필요합니다.
+- 확장 ID나 Gecko ID를 바꾸면 위 Redirect URI도 함께 바꿔야 합니다.
+- 위젯(Scriptable 등)도 **같은 앱 키**로 PKCE 인증을 받아야 같은 앱 폴더의 파일을 읽을 수 있습니다.
+
+### 직접 만든 앱을 쓸 때
+
+같은 방식(Scoped access · App folder, 위 두 권한)으로 앱을 만들고, 설정 → 고급에 표시된 리디렉션 주소를 Redirect URIs에 등록한 뒤 앱 키를 고급에 입력합니다. 이미 연결한 사용자는 연결할 때의 앱 키(`ks_dropbox.appKey`)로 계속 갱신하므로, 키를 바꾸면 **다시 연결**해야 합니다.
+
+### 동작
 
 - **인증**: `identity.launchWebAuthFlow` + PKCE(S256), `token_access_type=offline`. 리디렉션 URI는 구글과 같은 `identity.getRedirectURL()`입니다. 갱신 토큰은 `storage.local`의 `ks_dropbox`, 접근 토큰(약 4시간)은 `storage.session`의 `ks_dbx_token`에 둡니다.
 - **호출 시점**: `sync.js`의 `markDone` (반영 완료, 또는 변경 없음). 연결하지 않았으면 아무것도 하지 않습니다. 실패해도 예외를 던지지 않고 `ks_dbx_last`에 기록합니다.

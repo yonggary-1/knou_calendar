@@ -60,17 +60,7 @@
     <section class="card">
       <h2>4. Dropbox 내보내기 <span class="muted small">(위젯용, 선택)</span></h2>
       <p class="muted">동기화할 때마다 남은 일정을 Dropbox 앱 폴더의 <code>knou_agenda.json</code>에 저장합니다. 범위 메모 양식 <code>knou_scope.json</code>은 파일이 없을 때만 만들고, 이후로는 고치지 않습니다. 아이패드 Scriptable 위젯 등이 이 파일을 읽습니다.</p>
-      <label class="field">
-        <span>Dropbox 앱 키 (App key)</span>
-        <input type="text" id="dropboxAppKey" placeholder="직접 만든 Dropbox 앱(App folder)의 App key" spellcheck="false" autocomplete="off">
-      </label>
-      <label class="field">
-        <span>Dropbox 앱의 Redirect URI에 등록할 주소</span>
-        <div class="copyrow">
-          <input type="text" id="dbxRedirect" readonly>
-          <button id="btnCopyDbx">복사</button>
-        </div>
-      </label>
+      <p class="muted small">[연결]을 누르면 Dropbox 로그인 창이 열립니다. 확장은 Dropbox의 <code>Apps</code> 폴더 아래 앱 전용 폴더 하나에만 접근할 수 있습니다.</p>
       <div class="inline gap">
         <span class="muted">상태:</span> <b id="dbxAccount">연결 안 됨</b>
         <button id="btnDbxConnect">연결</button>
@@ -93,6 +83,18 @@
           <div class="copyrow">
             <input type="text" id="redirect" readonly>
             <button id="btnCopy">복사</button>
+          </div>
+        </label>
+        <p class="muted" id="dbxBuiltinInfo"></p>
+        <label class="field">
+          <span>직접 만든 Dropbox 앱 키 (비워두면 내장 앱 키 사용)</span>
+          <input type="text" id="dropboxAppKey" placeholder="App folder 방식 Dropbox 앱의 App key" spellcheck="false" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Dropbox 앱의 Redirect URI에 등록할 주소 (직접 만든 앱에만)</span>
+          <div class="copyrow">
+            <input type="text" id="dbxRedirect" readonly>
+            <button id="btnCopyDbx">복사</button>
           </div>
         </label>
         <label class="field">

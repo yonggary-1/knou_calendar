@@ -13,7 +13,7 @@
     deadlineReminders: '1440,180', // 마감 알림(분 전)
     autoApply: false, // 미리보기 없이 바로 반영
     placeOverrides: {}, // 장소 원문 → 정식 명칭
-    dropboxAppKey: '', // 위젯용 Dropbox 내보내기 (직접 만든 Dropbox 앱의 App key)
+    dropboxAppKey: '', // 직접 만든 Dropbox 앱을 쓸 때만. 비워두면 내장 앱 키 사용
   };
 
   KS.getSettings = async () => {
@@ -29,6 +29,7 @@
 
   // 직접 입력한 ID가 있으면 그것을, 없으면 빌드에 내장된 ID를 쓴다
   KS.effectiveClientId = (s) => String(s?.clientId || '').trim() || String(KS.env?.clientId || '').trim();
+  KS.effectiveDropboxKey = (s) => String(s?.dropboxAppKey || '').trim() || String(KS.env?.dropboxAppKey || '').trim();
 
   KS.parseReminders = (s) =>
     String(s ?? '')

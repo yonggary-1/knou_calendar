@@ -23,6 +23,11 @@
   for (const k of CHECKS) $(k).checked = !!settings[k];
   $('scopeMode').value = settings.scopeMode;
   if (settings.clientId || settings.scopeMode !== 'app') $('advanced').open = true;
+  const dbxBuiltin = String(KS.env.dropboxAppKey || '').trim();
+  $('dbxBuiltinInfo').textContent = dbxBuiltin
+    ? `이 빌드에는 Dropbox 앱 키가 내장되어 있어 따로 입력할 필요가 없습니다. (${dbxBuiltin})`
+    : '이 빌드에는 Dropbox 앱 키가 없습니다. Dropbox 내보내기를 쓰려면 직접 만든 앱 키를 입력하세요.';
+  if (settings.dropboxAppKey) $('advanced').open = true;
 
   async function showAccount() {
     const a = (await ext.storage.local.get('ks_account')).ks_account;
@@ -58,9 +63,9 @@
   }
   await showDropbox();
   $('btnDbxConnect').onclick = async () => {
-    // 입력한 앱 키를 먼저 저장해야 연결할 수 있다
+    // 고급에 입력한 앱 키가 있으면 먼저 저장 (비어 있으면 내장 키 사용)
     settings = await KS.saveSettings({ dropboxAppKey: $('dropboxAppKey').value.trim() });
-    if (!settings.dropboxAppKey) { await showDropbox('Dropbox 앱 키를 먼저 입력하세요.'); return; }
+    if (!KS.effectiveDropboxKey(settings)) { $('advanced').open = true; await showDropbox('이 빌드에는 Dropbox 앱 키가 없습니다. 고급에서 앱 키를 입력하세요.'); return; }
     await showDropbox('Dropbox 창에서 허용을 눌러 주세요…');
     const r = await send('connectDropbox');
     if (!r?.ok) { await showDropbox(r?.message || 'Dropbox 연결에 실패했습니다.'); return; }

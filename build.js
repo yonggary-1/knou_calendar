@@ -49,6 +49,11 @@ if (!wv1 || wv1 !== wv2) {
   console.error(`src/widget/KnouWidget.js 버전 표기가 맞지 않습니다 (첫 줄 ${wv1 || '없음'}, WIDGET_VERSION ${wv2 || '없음'})`);
   process.exit(1);
 }
+// 위젯 v1.1.0의 자동 업데이트는 받은 파일이 10KB 이상이고 Script.complete();로 끝나야 받아들인다 → 그 조건을 빌드에서도 지킨다
+if (widgetSrc.length <= 10000 || !/Script\.complete\(\);?\s*$/.test(widgetSrc.trim())) {
+  console.error('src/widget/KnouWidget.js가 위젯 자동 업데이트 조건(10KB 이상, Script.complete();로 끝남)을 만족하지 않습니다.');
+  process.exit(1);
+}
 console.log(`위젯 스크립트: KnouWidget v${wv1}`);
 
 for (const target of ['chromium', 'firefox']) {

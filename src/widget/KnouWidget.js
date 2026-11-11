@@ -1,4 +1,4 @@
-// KnouWidget v1.0.0 — 방통대 과목별 일정 + 과제 내용 (Scriptable)
+// KnouWidget v1.1.0 — 방통대 과목별 일정 + 과제 내용 (Scriptable)
 // 위젯 편집의 Parameter로 화면을 고른다 (스크립트는 이것 하나):
 //   비움 또는 a : 과목 칸 격자. 칸을 누르면 그 과목 상세 화면(스크롤)
 //   b           : 마감이 가까운 순서로 전 과목 요약 (같은 마감은 한 줄로 묶음)
@@ -6,10 +6,12 @@
 //   뒤에 크기 낱말: "a 크게", "b 작게", "1,2 아주 크게"
 // Knou calendar 확장이 Dropbox 앱 폴더(Apps\KnouWidget)에 저장한 두 파일을 읽는다.
 //   /knou_agenda.json : 남은 일정 (확장이 동기화할 때마다 덮어씀)
-//   /knou_scope.txt   : 과제 내용·시험 범위 (메모장·Dropbox 앱으로 편집. 없으면 /knou_scope.json)
+//   /knou_scope.txt   : 과제 내용·시험 범위 원본 (이 스크립트·확장·메모장·Dropbox 앱으로 편집. 없으면 /knou_scope.json)
+//   knou_agenda.json의 notes : 확장이 동기화 때 txt를 해석해 넣은 것. txt 버전(rev)이 notesRev와 같을 때만 씀
+//   /KnouWidget.js    : 확장이 올려 두는 이 스크립트. 앱에서 실행할 때 더 높은 버전이면 자기 파일을 교체
 // Dropbox 연결은 이 스크립트가 맡는다. 스크립트 이름은 반드시 KnouWidget.
 
-const WIDGET_VERSION = "1.0.0"; // 첫 줄의 "KnouWidget v1.0.0"과 같게 유지 (확장이 새 버전 여부를 판단할 때 씀)
+const WIDGET_VERSION = "1.1.0"; // 첫 줄의 "KnouWidget v1.1.0"과 같게 유지 (확장이 새 버전 여부를 판단할 때 씀)
 const APP_KEY = "htxa03bfx70wl6i"; // Knou calendar에 내장된 Dropbox 앱 키 (같은 앱 폴더를 쓰려면 같아야 함)
 const AGENDA_PATH = "/knou_agenda.json";
 const SCOPE_PATH = "/knou_scope.json"; // 예전 형식 (txt가 없을 때만)
@@ -168,6 +170,27 @@ async function dbx(endpoint, arg, body) {
   }
 }
 
+async function dbxRpc(endpoint, body) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = new Request("https://api.dropboxapi.com/2" + endpoint);
+    r.method = "POST";
+    r.headers = { Authorization: "Bearer " + (await accessToken(attempt > 0)), "Content-Type": "application/json" };
+    r.body = JSON.stringify(body);
+    const text = await r.loadString();
+    const status = r.response.statusCode;
+    if (status === 401 && attempt === 0) continue;
+    return { status, text };
+  }
+}
+
+// 파일 정보 (없으면 null). 내용을 받지 않아 가볍다
+async function metadata(path) {
+  const { status, text } = await dbxRpc("/files/get_metadata", { path });
+  if (status === 409 && /not_found/.test(text)) return null;
+  if (status !== 200) throw new Error(`Dropbox 파일 정보 오류 ${status}`);
+  return JSON.parse(text);
+}
+
 async function readTextWithRev(path) {
   const { status, text, meta } = await dbx("/files/download", { path });
   if (status === 409 && /not_found/.test(text)) return { text: null, rev: null };
@@ -232,11 +255,36 @@ const cachePath = fm.joinPath(fm.documentsDirectory(), "knou_widget_cache.json")
 function saveCache(d) { try { fm.writeString(cachePath, JSON.stringify(d)); } catch (e) {} }
 function loadCache() { try { return fm.fileExists(cachePath) ? JSON.parse(fm.readString(cachePath)) : null; } catch (e) { return null; } }
 
+// 확장이 넣은 notes → 위젯이 쓰는 모양 [{ course, kind, scope }]
+function notesToScope(notes) {
+  const items = [];
+  for (const [course, n] of Object.entries(notes || {})) {
+    for (const [k, kind] of [["mid", "중간평가"], ["final", "기말평가"], ["memo", ""]]) {
+      const body = String(n?.[k] || "").trim();
+      if (body) items.push({ course, kind, scope: body });
+    }
+  }
+  return { format: "notes", items };
+}
+
+// 과제 메모 고르기:
+//   txt의 rev가 notesRev와 같으면 → JSON의 notes (txt를 내려받지 않음)
+//   다르면(이 스크립트·메모장에서 고친 뒤 아직 PC에서 동기화 전) → txt를 직접 읽음 (더 최신)
+//   txt가 없으면 → notes, 그것도 없으면 예전 json
+async function loadScope(agenda) {
+  const meta = await metadata(SCOPE_TXT_PATH);
+  if (agenda?.notes && (!meta || meta.rev === agenda.notesRev)) return notesToScope(agenda.notes);
+  if (meta) {
+    const txt = await readText(SCOPE_TXT_PATH);
+    if (txt !== null) return parseScopeTxt(txt, coursesOf(agenda));
+  }
+  return agenda?.notes ? notesToScope(agenda.notes) : await readJSON(SCOPE_PATH);
+}
+
 async function loadData() {
   try {
-    const [agenda, txtScope] = await Promise.all([readJSON(AGENDA_PATH), readText(SCOPE_TXT_PATH)]);
-    // 과제 메모: txt가 원본. 없으면 예전 json
-    const scope = txtScope !== null ? parseScopeTxt(txtScope, coursesOf(agenda)) : await readJSON(SCOPE_PATH);
+    const agenda = await readJSON(AGENDA_PATH);
+    const scope = await loadScope(agenda);
     const d = { agenda, scope, fetchedAt: Date.now() };
     saveCache(d);
     return { ...d, offline: false };
@@ -811,11 +859,53 @@ async function courseTable() {
   await a.presentAlert();
 }
 
+// ---------------- 자동 업데이트 ----------------
+// 앱에서 실행할 때만 확인한다 (위젯을 그리는 중에는 자기 파일을 바꾸지 않음). 더 높은 버전일 때만 바꾼다
+const WIDGET_PATH = "/KnouWidget.js";
+const versionOf = (text) => (/^(?:\uFEFF)?\/\/ KnouWidget v(\d+\.\d+\.\d+)/.exec(String(text || "")) || [])[1] || "";
+function cmpVersion(a, b) {
+  const x = a.split(".").map(Number), y = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
+  return 0;
+}
+
+// 반환: "updated"(파일을 바꿈 → 다시 실행 필요) / null
+async function checkUpdate({ manual = false } = {}) {
+  let meta;
+  try { meta = await metadata(WIDGET_PATH); } catch (e) { if (manual) throw e; return null; }
+  const st = loadSettings();
+  if (!meta) { if (manual) await notice("업데이트 확인", `Dropbox에 KnouWidget.js가 없습니다.\n지금 버전: v${WIDGET_VERSION}`); return null; }
+  if (!manual && st.updateCheckedRev === meta.rev) return null; // 이미 확인한 파일
+  const text = await readText(WIDGET_PATH);
+  const v = versionOf(text);
+  saveSettings({ updateCheckedRev: meta.rev });
+  // 받은 파일이 온전한 위젯 스크립트인지 확인
+  const sane = v && text.length > 10000 && text.includes(`const WIDGET_VERSION = "${v}"`) && /Script\.complete\(\);?\s*$/.test(text.trim());
+  if (!sane || cmpVersion(v, WIDGET_VERSION) <= 0) {
+    if (manual) await notice("업데이트 확인", sane ? `지금이 최신입니다. (v${WIDGET_VERSION}, Dropbox v${v})` : "Dropbox의 KnouWidget.js를 확인하지 못했습니다.");
+    return null;
+  }
+  const where = module.filename;
+  const fmw = where.includes("/Mobile Documents/") ? FileManager.iCloud() : FileManager.local();
+  fmw.writeString(where, text);
+  await notice("새 버전으로 바꿨습니다", `v${WIDGET_VERSION} → v${v}\n\n스크립트를 닫고 다시 실행하면 새 버전으로 동작합니다. 위젯은 다음 갱신 때 바뀝니다.`);
+  return "updated";
+}
+
+async function notice(title, message) {
+  const a = new Alert();
+  a.title = title;
+  a.message = message;
+  a.addAction("확인");
+  await a.presentAlert();
+}
+
 async function appMenu() {
   if (!isConnected()) {
     const r = await connectDropbox();
     if (r !== true) return;
   }
+  if ((await checkUpdate()) === "updated") return;
   for (;;) {
     const m = new Alert();
     m.title = "KnouWidget";
@@ -830,6 +920,7 @@ async function appMenu() {
     add("미리보기: b (마감 순 요약)", async () => (await buildWidget("extraLarge", "b")).presentExtraLarge());
     add("미리보기: 1,2 (고른 과목)", async () => (await buildWidget("extraLarge", "1,2")).presentExtraLarge());
     add("Dropbox 다시 연결", async () => (await connectDropbox()) === "pending" ? "stop" : null);
+    add(`업데이트 확인 (지금 v${WIDGET_VERSION})`, async () => ((await checkUpdate({ manual: true })) === "updated" ? "stop" : null));
     m.addCancelAction("닫기");
     const i = await m.presentSheet();
     if (i === -1) return;

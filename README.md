@@ -107,7 +107,7 @@
 4. **iCloud Drive › Scriptable**에 **붙여넣기**합니다. 이름은 `KnouWidget.js` 그대로 둡니다(대소문자 구분).
 5. Scriptable에서 **KnouWidget**을 한 번 실행해 Dropbox를 연결하고, 홈 화면에 Scriptable 위젯을 추가해 스크립트로 KnouWidget을 고릅니다.
 
-Scriptable 폴더에는 다른 앱이 파일을 넣을 수 없어서 3~4번 복사는 직접 해야 합니다. 위젯 스크립트는 [릴리즈](https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js)에서도 받을 수 있습니다.
+Scriptable 폴더에는 다른 앱이 파일을 넣을 수 없어서 3~4번 복사는 직접 해야 합니다. 위젯 v1.1.0부터는 Scriptable에서 KnouWidget을 실행할 때 확장이 올려 둔 새 버전으로 **스스로 바뀌므로**, 복사는 처음 한 번만 하면 됩니다(v1.0.0을 쓰고 있었다면 v1.1.0으로 한 번 더). 위젯 스크립트는 [릴리즈](https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js)에서도 받을 수 있습니다.
 
 확장의 Dropbox 앱은 아직 **개발 단계**라 연결할 수 있는 사용자 수에 제한이 있습니다. 연결이 거부되면 [직접 만든 Dropbox 앱](docs/DEVELOPER.md)의 키를 설정 → 고급에 넣어 쓸 수 있습니다.
 

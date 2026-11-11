@@ -190,7 +190,10 @@ const agenda = (semester) => ({
   out('[5] 새 학기 → archive 이동 후 새 양식 통과');
 
   // ---- 6. 위젯 스크립트: 다른 버전이 있으면 교체, 같은 버전이면 그대로 ----
-  dbx.put('/KnouWidget.js', WIDGET.replace(/v1\.0\.0/, 'v0.9.0').replace('"1.0.0"', '"0.9.0"'));
+  // 위젯 버전이 무엇이든 "다른 버전"을 만든다 (첫 줄과 WIDGET_VERSION을 0.0.1로)
+  const older = WIDGET.replace(/^(\/\/ KnouWidget v)\d+\.\d+\.\d+/, '$10.0.1').replace(/(const WIDGET_VERSION = ")\d+\.\d+\.\d+(")/, '$10.0.1$2');
+  assert.notStrictEqual(older, WIDGET);
+  dbx.put('/KnouWidget.js', older);
   await local.remove('ks_widget');
   assert.strictEqual(await KS.dropbox.ensureWidget(), 'updated');
   assert.strictEqual(dbx.text('/KnouWidget.js'), WIDGET);

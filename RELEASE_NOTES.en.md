@@ -1,18 +1,17 @@
-## Knou calendar v1.6.0 — Assignment notes and the iPad widget
+## Knou calendar v1.6.1 — Widget v1.1.0
 
-### New
-- **📝 Assignment notes (과제 메모)**: a button at the bottom of the popup opens a full-size editor. Write midterm / final / course notes per course and save; they go to `knou_scope.txt` in Dropbox and show up in the widget right away. It is the same file you edit in the iPad widget or Notepad, and if someone else saved while you were editing, the editor does not overwrite it.
-- **Assignment notes in Google Calendar descriptions.** Assessment notes go into that assessment's submission-period event (the exam event for exam-type assessments); course memos go into every event of that course. When only notes change, only descriptions are edited and events are not recreated, so reminders don't fire again.
-- **iPad/iPhone widget (KnouWidget v1.0.0)** is placed in Dropbox by the extension. Copy it once from the Files app into the Scriptable folder; see Settings → 4. Dropbox 내보내기 or the README.
+The extension behaves the same as 1.6.0. Only the bundled iPad/iPhone widget script changed, to **KnouWidget v1.1.0**.
 
-### Changed
-- The notes template is now `knou_scope.txt`. `knou_scope.json` is no longer created; an existing one is kept.
-- When the semester changes, old notes are moved to the `archive` folder and a new template is created.
+### Widget v1.1.0
+- Uses the assignment notes (`notes`) written by the extension first. If you edited notes in the widget or Notepad and haven't synced on the PC yet, it reads `knou_scope.txt` from Dropbox directly to show the latest content.
+- **Widget self-update**: when you run KnouWidget in the Scriptable app and the extension has uploaded a higher version to Dropbox, the widget replaces itself. You can also check from the menu with [업데이트 확인] (Check for updates).
+
+### How to update
+1. Update the extension to 1.6.1 and sync once. The extension uploads widget v1.1.0 to Dropbox.
+2. Widget v1.0.0 cannot update itself, so copy it **one more time**: Files app → Dropbox › Apps › KnouWidget → copy `KnouWidget.js` and paste it into iCloud Drive › Scriptable, replacing the old one.
+3. From the next version on, running KnouWidget in Scriptable updates it automatically.
 
 ### Assets
 - `knou_calendar_chromium.zip`: for Chrome, Edge, Whale, and Opera. Extract it one level above the folder your browser loads, overwrite, and press reload (↻) on the extensions page.
 - `knou_calendar_firefox.zip`: package for Mozilla signing (Firefox).
-- `KnouWidget.js`: the iPad/iPhone Scriptable widget script.
-
-### Notes
-- Your settings and connections (Google, Dropbox) are kept. The first sync after updating only edits the descriptions of events whose course has notes; no events are recreated.
+- `KnouWidget.js`: the iPad/iPhone Scriptable widget script (v1.1.0).

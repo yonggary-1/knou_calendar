@@ -107,7 +107,7 @@ Click **📝 과제 메모** at the bottom of the popup to open a full-size edit
 4. Paste it into **iCloud Drive › Scriptable**. Keep the name `KnouWidget.js` (case-sensitive).
 5. Run **KnouWidget** once in Scriptable to connect Dropbox, then add a Scriptable widget to your home screen and choose KnouWidget as its script.
 
-Other apps cannot write into the Scriptable folder, so steps 3–4 must be done by hand. The widget script is also available from [Releases](https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js).
+Other apps cannot write into the Scriptable folder, so steps 3–4 must be done by hand. From widget v1.1.0 on, running KnouWidget in Scriptable **updates it automatically** to the newer version the extension uploaded, so you only copy it once (if you were on v1.0.0, copy v1.1.0 one more time). The widget script is also available from [Releases](https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js).
 
 The extension's Dropbox app is still in **development** status, which limits how many users can connect. If the connection is refused, you can put the key of [your own Dropbox app](docs/DEVELOPER.md) into Settings → Advanced.
 

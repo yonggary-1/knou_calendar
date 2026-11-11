@@ -48,7 +48,8 @@
     catch { $('dbxRedirect').select(); }
     setTimeout(() => ($('btnCopyDbx').textContent = '복사'), 1500);
   };
-  const SCOPE_TEXT = { created: '범위 양식을 새로 만듦', renewed: '새 학기 범위 양식을 만들고 옛 파일은 archive로 옮김', kept: '범위 파일은 그대로 둠' };
+  const SCOPE_TEXT = { created: '과제 메모 양식을 새로 만듦', renewed: '새 학기 과제 메모 양식을 만들고 옛 파일은 archive로 옮김', kept: '과제 메모 반영' };
+  const WIDGET_TEXT = { created: '위젯 스크립트를 올림', updated: '위젯 스크립트 새 버전을 올림', same: '', conflict: '', error: '위젯 스크립트 확인 실패', skipped: '' };
   async function showDropbox(note) {
     const s = (await send('dropboxStatus')) || {};
     $('dbxAccount').textContent = s.connected ? `연결됨${s.email ? ' · ' + s.email : ''}` : '연결 안 됨';
@@ -57,7 +58,7 @@
     const l = s.last;
     $('dbxLast').textContent = note
       || (!l ? (s.connected ? '아직 내보낸 적이 없습니다. 팝업에서 [동기화 확인 & Dropbox 내보내기]를 누르세요.' : '')
-        : l.ok ? `마지막 내보내기 ${KS.fmtTime(l.at)} · 일정 ${l.items}건 · ${SCOPE_TEXT[l.scope] || ''}`
+        : l.ok ? [`마지막 내보내기 ${KS.fmtTime(l.at)}`, `일정 ${l.items}건`, l.scope === 'kept' && l.notes === false ? '과제 메모를 읽지 못함' : SCOPE_TEXT[l.scope], WIDGET_TEXT[l.widget]].filter(Boolean).join(' · ')
         : `마지막 내보내기 실패 ${KS.fmtTime(l.at)} — ${l.message}`);
   }
   await showDropbox();

@@ -10,7 +10,7 @@ const GECKO_ID = 'knou_calendar@yonggary.local';
 
 const BACKGROUND = [
   'lib/env.js', 'lib/core.js', 'lib/settings.js', 'lib/log.js', 'lib/nuxt.js',
-  'lib/schedule.js', 'lib/knou.js', 'lib/gauth.js', 'lib/gcal.js', 'lib/dropbox.js', 'lib/sync.js', 'background.js',
+  'lib/schedule.js', 'lib/scope.js', 'lib/knou.js', 'lib/gauth.js', 'lib/gcal.js', 'lib/dropbox.js', 'lib/sync.js', 'background.js',
 ];
 const SKIP = new Set(['manifest.base.json', 'chromium_key.txt', 'config.json']);
 
@@ -40,6 +40,16 @@ if (dropboxAppKey && !/^[a-z0-9]{10,20}$/i.test(dropboxAppKey)) {
   process.exit(1);
 }
 console.log(dropboxAppKey ? `내장 Dropbox 앱 키: ${dropboxAppKey}` : '경고: 내장 Dropbox 앱 키 없음 (설정 > 고급에서 입력해야 Dropbox 내보내기 동작)');
+
+// 위젯 스크립트: 첫 줄 "// KnouWidget v<버전> —" 과 const WIDGET_VERSION = "<버전>" 이 같아야 한다
+const widgetSrc = fs.readFileSync(path.join(SRC, 'widget', 'KnouWidget.js'), 'utf8');
+const wv1 = /^\/\/ KnouWidget v(\d+\.\d+\.\d+) —/.exec(widgetSrc)?.[1];
+const wv2 = /const WIDGET_VERSION = "(\d+\.\d+\.\d+)";/.exec(widgetSrc)?.[1];
+if (!wv1 || wv1 !== wv2) {
+  console.error(`src/widget/KnouWidget.js 버전 표기가 맞지 않습니다 (첫 줄 ${wv1 || '없음'}, WIDGET_VERSION ${wv2 || '없음'})`);
+  process.exit(1);
+}
+console.log(`위젯 스크립트: KnouWidget v${wv1}`);
 
 for (const target of ['chromium', 'firefox']) {
   const out = path.join(DIST, target);

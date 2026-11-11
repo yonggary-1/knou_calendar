@@ -14,7 +14,7 @@ A browser extension that automatically copies **attendance classes, midterm, fin
   - Exam-type assessments: exam time. It is added at the next sync once the date is announced.
   - Formative assessment: study period and deadline.
 - **Change tracking**: detects campus changes, schedule changes, and dropped courses, and replaces or removes only the affected course's events. You review a preview before anything is applied.
-- **Dropbox export for widgets (optional)**: after each sync, saves the upcoming task list to `knou_agenda.json` in a Dropbox app folder and creates a `knou_scope.json` template for writing assignment topics and exam scope. A widget such as an iPad Scriptable widget can read these files to show schedules and scope together.
+- **Assignment notes and widget (optional)**: write per-course assignment topics and exam scope in `knou_scope.txt` in Dropbox. You can edit it in the extension's editor, the iPad widget, or Notepad, and the notes also go into Google Calendar event descriptions. Every sync exports upcoming tasks and notes for the widget and puts the widget script (KnouWidget) in Dropbox.
 - **Upcoming tasks**: the extension popup lists remaining tasks per course with a D-day counter, and each item links to the matching KNOU page.
 - **Safety**
   - Events you created yourself and events from past semesters are never touched.
@@ -58,27 +58,58 @@ After that, just use **동기화 확인 → 반영** whenever your schedule chan
 - The extension's Google app is currently in **testing mode**. Only Gmail accounts added as test users by the developer can connect. Other accounts get an `access_denied` error. To use it, ask the developer to add you, or create [your own OAuth client](docs/DEVELOPER.md).
 - The permission scope is limited to **calendars created by this extension**. It cannot read or change your other calendars.
 
-### Dropbox export (optional)
+### Dropbox export and widget (optional)
 
-Use this only if you want a widget to show schedules together with assignment or exam scope. Nothing changes if you don't set it up.
+Use this only if you want the iPad/iPhone widget (KnouWidget) to show schedules together with your assignment notes. Nothing changes if you don't set it up.
 
 1. Click **연결** (Connect) on the **Dropbox** row of the popup. The **연결** button in Settings → **4. Dropbox 내보내기** does the same.
 2. Click **Allow** in the Dropbox window. The Dropbox app key is built into the extension, so there is nothing to enter.
 
-Once connected, the popup button becomes **동기화 확인 & Dropbox 내보내기** (Check sync & export to Dropbox). That one button syncs the calendar and exports. If the export fails, the dot on the Dropbox row turns red; press the button again to retry.
+Once connected, the popup button becomes **동기화 확인 & Dropbox 내보내기** (Check sync & export to Dropbox). That one button syncs the calendar and exports. If an export fails, the dot on the Dropbox row turns red; press the button again to retry. If you don't use Dropbox, click **사용 안 함** (Don't use) to hide it; connecting later from Settings brings it back.
 
-If you don't use Dropbox, click **사용 안 함** (Don't use) in the popup. The Dropbox row disappears; connecting later from Settings → 4 brings it back.
-
-Once connected, every sync writes two files to the app's own folder under `Apps` in your Dropbox (on Windows, under `%USERPROFILE%\Dropbox\Apps\`).
+The files live in `Apps › KnouWidget` in your Dropbox (with the Dropbox desktop app on Windows: `%USERPROFILE%\Dropbox\Apps\KnouWidget\`).
 
 | File | Contents | Who edits it |
 | --- | --- | --- |
-| `knou_agenda.json` | The same list as the popup's upcoming tasks (course, kind, start/deadline, place) | Overwritten by the extension on every sync |
-| `knou_scope.json` | A scope template with midterm/final slots per course | You (the extension only creates it when it is missing) |
+| `knou_scope.txt` | **Assignment notes** — per-course midterm/final notes and a course memo | You (popup 📝 과제 메모, the widget, Notepad). The extension only creates a template when the file is missing |
+| `knou_agenda.json` | The popup's upcoming tasks + `notes` parsed from the assignment notes | The extension (on every sync and whenever you save notes) |
+| `KnouWidget.js` | The widget script | The extension (only when missing or a different version) |
 
-The extension's Dropbox app is still in **development status**, so the number of users who can connect is limited. If the connection is refused, you can enter the key of [your own Dropbox app](docs/DEVELOPER.md) in Settings → 고급 (Advanced).
+### Assignment notes
 
-When the semester changes, the old `knou_scope.json` is moved to `archive\knou_scope_<semester>.json` and a new template is created. If you remove the `semester` value from the file, the extension treats it as yours and never moves it.
+Click **📝 과제 메모** at the bottom of the popup to open a full-size editor. For each course, type plain text into **중간평가 / 기말평가 / 과목 메모** (midterm / final / course memo) and click **저장** (Save) or press `Ctrl+S`.
+
+- The widget picks up a save immediately. Google Calendar descriptions are updated **at the next sync**:
+  - **Assessment notes** go into that assessment's **submission-period** event (the exam event for exam-type assessments), not the deadline event. If there is no submission-period event (turned off in Settings, or a one-day period), they go into the deadline event instead.
+  - **Course memos** go into every event of that course, including attendance classes.
+  - When only notes change, only the descriptions are edited; events are not recreated, so reminders don't fire again.
+- You can also edit the same file in the widget or in Notepad. If someone else saved while you were editing, the editor does not overwrite it; **새 내용 불러오고 내 변경 다시 채우기** (Reload and re-apply my changes) keeps both.
+- Format when editing by hand: a course line must match the MyKNOU course name (spaces are ignored). Lines above the first course (the header) are not shown in the widget.
+
+  ```
+  2026-2학기 과제 메모 — 첫 과목명 위에 적은 내용은 위젯에 나오지 않습니다.
+
+  인간과사회
+  교재 2026 개정판 사용            ← course memo (right under the course name)
+  중간평가:
+  기말평가: 교재 3장의 사회 계층 이론으로 사례 분석
+  A4 3쪽 내외, 참고문헌 2개 이상    ← multiple lines are fine
+  ```
+
+- When the semester changes, the old file is moved to `archive\knou_scope_<semester>.txt` and a new template is created. The semester is read from **`2026-2학기` at the start of the header's first line**. If you remove the header, the extension treats the file as yours and leaves it alone.
+- `knou_scope.json` (used up to 1.5.0) is no longer created. An existing file is kept, and the editor starts from it when `knou_scope.txt` does not exist yet.
+
+### Installing the iPad/iPhone widget (once)
+
+1. Install **Scriptable** from the App Store and open it once.
+2. Connect Dropbox as above and sync once. The extension puts `KnouWidget.js` in `Apps › KnouWidget`.
+3. In the **Files** app → **Dropbox** → **Apps › KnouWidget**, long-press `KnouWidget.js` and choose **Copy**.
+4. Paste it into **iCloud Drive › Scriptable**. Keep the name `KnouWidget.js` (case-sensitive).
+5. Run **KnouWidget** once in Scriptable to connect Dropbox, then add a Scriptable widget to your home screen and choose KnouWidget as its script.
+
+Other apps cannot write into the Scriptable folder, so steps 3–4 must be done by hand. The widget script is also available from [Releases](https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js).
+
+The extension's Dropbox app is still in **development** status, which limits how many users can connect. If the connection is refused, you can put the key of [your own Dropbox app](docs/DEVELOPER.md) into Settings → Advanced.
 
 ## Privacy
 

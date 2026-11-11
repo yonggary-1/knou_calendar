@@ -48,6 +48,18 @@
         const x = await KS.dropbox.exportAgenda({ quiet: false }); // 남은 일정이 있으면 바로 한 번 내보냄
         return { ...r, exported: x };
       }),
+    // 과제 메모 편집기 (editor/editor.html)
+    openScopeEditor: async () => {
+      const url = ext.runtime.getURL('editor/editor.html');
+      const [tab] = await ext.tabs.query({ url });
+      if (tab) {
+        await ext.tabs.update(tab.id, { active: true });
+        try { await ext.windows.update(tab.windowId, { focused: true }); } catch { /* 창 포커스는 실패해도 됨 */ }
+      } else await ext.tabs.create({ url });
+      return { ok: true };
+    },
+    scopeLoad: () => wrap(KS.dropbox.loadScope),
+    scopeSave: (msg) => wrap(() => KS.dropbox.saveScope(msg.data || {})),
     hideDropbox: async () => {
       await KS.saveSettings({ dropboxHidden: true });
       KS.log('info', 'Dropbox 줄 숨김 (사용 안 함)');

@@ -2,7 +2,7 @@
   const { h, send, ext, fmtTime } = KS;
   const $ = (id) => document.getElementById(id);
   const panel = $('panel');
-  const OP = { add: '추가', replace: '교체', delete: '삭제' };
+  const OP = { add: '추가', replace: '교체', update: '메모', delete: '삭제' };
   let lastKey = '';
 
   $('btnOptions').onclick = () => { send('openOptions'); window.close(); };
@@ -109,6 +109,8 @@
 
     // ---- Dropbox (선택) ----
     const d = st.dropbox || {};
+    $('btnScope').hidden = !d.connected; // 과제 메모는 Dropbox의 knou_scope.txt를 고치므로 연결했을 때만
+    $('btnScope').onclick = () => { send('openScopeEditor'); window.close(); };
     $('dbxRow').hidden = !!d.hidden || (!d.connected && !d.hasKey);
     if (d.connected) {
       const failed = d.last && d.last.ok === false;
@@ -166,6 +168,7 @@
       h('div', { class: 'chips' },
         c.add ? h('span', { class: 'chip add' }, `추가 ${c.add}`) : null,
         c.replace ? h('span', { class: 'chip replace' }, `교체 ${c.replace}`) : null,
+        c.update ? h('span', { class: 'chip update', title: '과제 메모가 바뀌어 설명란만 고칩니다' }, `메모 ${c.update}`) : null,
         c.delete ? h('span', { class: 'chip delete' }, `삭제 ${c.delete}`) : null),
       h('ul', { class: 'list' },
         (plan.items || []).map((it) =>

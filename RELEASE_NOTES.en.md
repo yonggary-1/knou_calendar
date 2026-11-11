@@ -1,15 +1,18 @@
-## Knou calendar v1.5.0 — Dropbox connect and export from the popup
+## Knou calendar v1.6.0 — Assignment notes and the iPad widget
 
-### What's new
-- The popup's connection status now has a **Dropbox row**, next to KNOU and Google. You can connect right there.
-- Once Dropbox is connected, the button becomes **동기화 확인 & Dropbox 내보내기** (Check sync & export to Dropbox). One button syncs the calendar and exports for the widget.
-- If you don't use Dropbox, click **사용 안 함** (Don't use) to hide it from the popup. Connecting later from Settings brings it back.
-- If an export fails, the Dropbox row shows a red dot. Press the button again to retry.
-- When a sign-in window gets stuck on an error page and blocks the next connection, the extension now explains how to clear it.
+### New
+- **📝 Assignment notes (과제 메모)**: a button at the bottom of the popup opens a full-size editor. Write midterm / final / course notes per course and save; they go to `knou_scope.txt` in Dropbox and show up in the widget right away. It is the same file you edit in the iPad widget or Notepad, and if someone else saved while you were editing, the editor does not overwrite it.
+- **Assignment notes in Google Calendar descriptions.** Assessment notes go into that assessment's submission-period event (the exam event for exam-type assessments); course memos go into every event of that course. When only notes change, only descriptions are edited and events are not recreated, so reminders don't fire again.
+- **iPad/iPhone widget (KnouWidget v1.0.0)** is placed in Dropbox by the extension. Copy it once from the Files app into the Scriptable folder; see Settings → 4. Dropbox 내보내기 or the README.
+
+### Changed
+- The notes template is now `knou_scope.txt`. `knou_scope.json` is no longer created; an existing one is kept.
+- When the semester changes, old notes are moved to the `archive` folder and a new template is created.
 
 ### Assets
 - `knou_calendar_chromium.zip`: for Chrome, Edge, Whale, and Opera. Extract it one level above the folder your browser loads, overwrite, and press reload (↻) on the extensions page.
 - `knou_calendar_firefox.zip`: package for Mozilla signing (Firefox).
+- `KnouWidget.js`: the iPad/iPhone Scriptable widget script.
 
 ### Notes
-- Your settings and connections (Google, Dropbox) are kept.
+- Your settings and connections (Google, Dropbox) are kept. The first sync after updating only edits the descriptions of events whose course has notes; no events are recreated.

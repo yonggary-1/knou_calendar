@@ -59,7 +59,7 @@
 
     <section class="card">
       <h2>4. Dropbox 내보내기 <span class="muted small">(위젯용, 선택)</span></h2>
-      <p class="muted">동기화할 때마다 남은 일정을 Dropbox 앱 폴더의 <code>knou_agenda.json</code>에 저장합니다. 범위 메모 양식 <code>knou_scope.json</code>은 파일이 없을 때만 만들고, 이후로는 고치지 않습니다. 아이패드 Scriptable 위젯 등이 이 파일을 읽습니다.</p>
+      <p class="muted">동기화할 때마다 남은 일정을 Dropbox의 <code>Apps › KnouWidget</code> 폴더에 <code>knou_agenda.json</code>으로 저장합니다. 과제 메모 <code>knou_scope.txt</code>는 파일이 없을 때만 양식을 만들고, 이후로는 팝업의 <b>📝 과제 메모</b>·위젯·메모장에서 고친 내용을 그대로 씁니다. 과제 메모는 구글 캘린더 일정 설명란에도 들어갑니다(평가 내용은 제출기간 일정에, 과목 메모는 그 과목 일정 전부에).</p>
       <p class="muted small">[연결]을 누르면 Dropbox 로그인 창이 열립니다. 확장은 Dropbox의 <code>Apps</code> 폴더 아래 앱 전용 폴더 하나에만 접근할 수 있습니다. 연결하면 팝업에 Dropbox 줄이 나타나고, 동기화 버튼이 내보내기까지 함께 합니다. 팝업에서 [사용 안 함]으로 숨겼어도 여기서 연결하면 다시 나타납니다.</p>
       <div class="inline gap">
         <span class="muted">상태:</span> <b id="dbxAccount">연결 안 됨</b>
@@ -67,6 +67,17 @@
         <button id="btnDbxDisconnect" class="link" hidden>연결 해제</button>
       </div>
       <p class="muted small" id="dbxLast"></p>
+      <details class="howto">
+        <summary><b>아이패드·아이폰 위젯 설치 (처음 한 번)</b></summary>
+        <ol>
+          <li>App Store에서 <b>Scriptable</b>을 설치하고 한 번 엽니다.</li>
+          <li>Dropbox를 연결하고 한 번 동기화하면, 확장이 <code>Apps › KnouWidget</code> 폴더에 <b>KnouWidget.js</b>를 넣어 둡니다.</li>
+          <li><b>파일</b> 앱 → <b>Dropbox</b> → <b>Apps › KnouWidget</b> → <code>KnouWidget.js</code>를 길게 눌러 <b>복사</b>합니다.</li>
+          <li><b>iCloud Drive › Scriptable</b> 폴더에 <b>붙여넣기</b>합니다. 파일 이름은 반드시 <code>KnouWidget.js</code> 그대로 둡니다.</li>
+          <li>Scriptable에서 <b>KnouWidget</b>을 한 번 실행해 Dropbox를 연결한 뒤, 홈 화면에 Scriptable 위젯을 추가하고 스크립트로 KnouWidget을 고릅니다.</li>
+        </ol>
+        <p class="muted small">Scriptable 폴더에는 다른 앱이 파일을 넣을 수 없어서 이 복사 한 번은 직접 해야 합니다. 위젯 새 버전은 확장이 Dropbox에 올려 둡니다. 릴리즈 페이지에서도 받을 수 있습니다: <code>https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js</code></p>
+      </details>
     </section>
 
     <details class="card" id="advanced">

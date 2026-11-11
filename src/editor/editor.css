@@ -1,0 +1,41 @@
+body { background: var(--surface); }
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+.small { font-size: 12px; }
+
+.bar { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar-in { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; }
+.title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.title img { border-radius: 6px; flex: none; }
+.title h1 { margin: 0; font-size: 17px; letter-spacing: -0.01em; }
+.title p { margin: 1px 0 0; }
+.acts { display: flex; align-items: center; gap: 8px; }
+.acts .primary { padding: 8px 22px; }
+
+main.wrap { padding-top: 14px; padding-bottom: 48px; display: grid; gap: 12px; }
+main p { margin: 0; }
+
+.jump { display: flex; flex-wrap: wrap; gap: 6px; }
+.jump a { font-size: 12px; font-weight: 600; color: var(--brand); text-decoration: none; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
+.jump a:hover { border-color: var(--brand); }
+
+.course { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; display: grid; gap: 4px; scroll-margin-top: 80px; }
+.course h2 { margin: 0 0 4px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.course h2 .dirty { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); visibility: hidden; }
+.course.changed h2 .dirty { visibility: visible; }
+.course label { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 8px; }
+.course textarea {
+  font: 14px/1.55 "Pretendard", "Malgun Gothic", system-ui, sans-serif;
+  color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 9px;
+  padding: 8px 10px; min-height: 58px; resize: vertical; width: 100%;
+}
+.course textarea:focus { outline: 2px solid var(--brand-2); outline-offset: 0; border-color: transparent; }
+
+#banner[hidden] { display: none; }
+#banner { border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--bg); display: grid; gap: 8px; }
+#banner.bad { border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+#banner.warn { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+#banner .t { font-weight: 700; }
+#banner .row { display: flex; gap: 8px; flex-wrap: wrap; }
+#banner textarea { width: 100%; min-height: 140px; font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.empty { background: var(--bg); border: 1px dashed var(--line); border-radius: 14px; padding: 28px 16px; text-align: center; }

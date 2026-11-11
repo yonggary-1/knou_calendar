@@ -104,6 +104,7 @@
   }
 
   const insertEvent = (token, calId, ev) => api(token, 'POST', `/calendars/${enc(calId)}/events`, { body: ev });
+  const patchEvent = (token, calId, id, body) => api(token, 'PATCH', `/calendars/${enc(calId)}/events/${enc(id)}`, { body });
   const deleteEvent = (token, calId, id) => api(token, 'DELETE', `/calendars/${enc(calId)}/events/${enc(id)}`, { okStatuses: [404, 410] });
 
   async function deleteCalendar(token) {
@@ -112,5 +113,5 @@
     await KS.ext.storage.local.remove('ks_calendar');
   }
 
-  KS.gcal = { ensureCalendar, listEvents, insertEvent, deleteEvent, deleteCalendar };
+  KS.gcal = { ensureCalendar, listEvents, insertEvent, patchEvent, deleteEvent, deleteCalendar };
 })();

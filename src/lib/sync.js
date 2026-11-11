@@ -104,6 +104,26 @@
     return State.set(patch);
   }
 
+  // 캘린더 설명란에 넣을 과제 메모. Dropbox에서 최신을 읽고, 못 읽으면 마지막으로 읽은 것을 쓴다
+  // (못 읽을 때마다 메모를 빼 버리면 설명란이 매번 바뀌므로)
+  async function notesForCalendar(knou) {
+    const cached = (await KS.ext.storage.local.get('ks_notes')).ks_notes;
+    if (!(await KS.dropbox.status()).connected) return cached?.notes || null;
+    const courses = (knou.courses || []).map((c) => c.name);
+    let timer;
+    try {
+      const fresh = await Promise.race([
+        KS.dropbox.readNotes({ courses }),
+        new Promise((resolve) => { timer = setTimeout(() => resolve(null), 15000); }),
+      ]);
+      return fresh?.notes || cached?.notes || null;
+    } catch {
+      return cached?.notes || null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   let runId = 0; // 취소된 회차의 늦은 결과가 상태를 덮어쓰지 않게 한다
 
   async function preview({ interactive = false, trigger = 'user', forceInteractive = false } = {}) {
@@ -155,7 +175,8 @@
       }
       if (!live()) return State.get();
 
-      const built = KS.schedule.build(knou, settings);
+      const notes = await notesForCalendar(knou);
+      const built = KS.schedule.build(knou, settings, notes);
       await KS.ext.storage.local.set({ ks_places: built.places });
       await KS.ext.storage.session.set({
         ks_agenda_pending: { items: built.agenda, savedAt: Date.now(), semester: built.semesters[0] || '', courses: knou.courses.map((c) => c.name) },
@@ -165,7 +186,7 @@
 
       if (plan.total === 0) return await markDone('변경 사항이 없습니다. 캘린더가 최신 상태입니다.');
 
-      await KS.ext.storage.session.set({ ks_plan: { calId, inserts: plan.inserts, deletes: plan.deletes, counts: plan.counts } });
+      await KS.ext.storage.session.set({ ks_plan: { calId, inserts: plan.inserts, deletes: plan.deletes, patches: plan.patches, counts: plan.counts } });
       const ui = { total: plan.total, counts: plan.counts, items: plan.items };
 
       if (built.courseCount === 0 && plan.counts.delete > 0) {
@@ -196,7 +217,8 @@
       const cur = await State.get();
       if (cur.phase === 'confirm_empty' && !allowEmpty) return cur;
 
-      const total = plan.inserts.length + plan.deletes.length;
+      const patches = plan.patches || [];
+      const total = plan.inserts.length + plan.deletes.length + patches.length;
       let done = 0;
       await State.set({ phase: 'applying', message: '캘린더에 반영하는 중…', progress: { done, total } });
 
@@ -219,11 +241,12 @@
       // 새 일정을 먼저 넣고 옛 일정을 지운다 → 중간에 끊겨도 일정이 사라지지 않음
       for (const ev of plan.inserts) { await call((t) => KS.gcal.insertEvent(t, plan.calId, ev)); await tick(); }
       for (const id of plan.deletes) { await call((t) => KS.gcal.deleteEvent(t, plan.calId, id)); await tick(); }
+      for (const p of patches) { await call((t) => KS.gcal.patchEvent(t, plan.calId, p.id, p.body)); await tick(); }
 
       await KS.ext.storage.session.remove('ks_plan');
       const c = plan.counts;
       KS.log('info', '반영 완료', c);
-      return await markDone(`반영 완료 — 추가 ${c.add} · 교체 ${c.replace} · 삭제 ${c.delete}`);
+      return await markDone(`반영 완료 — 추가 ${c.add} · 교체 ${c.replace} · 삭제 ${c.delete}${c.update ? ` · 메모 ${c.update}` : ''}`);
     } catch (e) {
       const s = await fail(e, 'apply');
       if (s.phase === 'error') return State.set({ message: s.message + ' 일부만 반영되었을 수 있습니다. 다시 동기화하면 정리됩니다.' });

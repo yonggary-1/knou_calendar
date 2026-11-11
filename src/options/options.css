@@ -34,4 +34,8 @@ table.places th { text-align: left; font-weight: 600; color: var(--muted); paddi
 table.places td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 table.places td.auto { color: var(--muted); }
 table.places input { padding: 5px 7px; }
+details.howto { border-top: 1px solid var(--line); padding-top: 10px; }
+details.howto summary { cursor: pointer; }
+details.howto ol { margin: 8px 0 6px; padding-left: 20px; display: grid; gap: 4px; }
+details.howto p { margin: 0; word-break: break-all; }
 .empty { padding: 14px; border: 1px dashed var(--line); border-radius: 10px; text-align: center; }

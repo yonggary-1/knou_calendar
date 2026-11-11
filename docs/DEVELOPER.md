@@ -13,7 +13,11 @@ Knou calendar를 직접 빌드하거나, 자신의 구글 OAuth 클라이언트�
 | `build.js` | `dist/chromium`, `dist/firefox` 생성 후 `tools/pack.js`로 첨부 zip까지 만듦 |
 | `tools/pack.js` | 릴리즈 첨부 zip 두 개 생성 (Node 기본 모듈만 사용) |
 | `test/run_test.js` | 저장한 MyKNOU 대시보드 HTML로 파서·일정 변환 점검 |
-| `test/dropbox_test.js` | 가짜 Dropbox로 내보내기 흐름 점검 (네트워크 사용 안 함) |
+| `test/dropbox_test.js` | 가짜 Dropbox로 내보내기·과제 메모 양식·위젯 배포·편집기 저장/충돌 점검 (네트워크 사용 안 함) |
+| `test/scope_test.js` | 확장과 위젯의 과제 메모 해석·저장 규칙이 같은지 위젯 스크립트와 직접 비교 |
+| `src/lib/scope.js` | 과제 메모 `knou_scope.txt` 해석·저장 (위젯과 같은 규칙) |
+| `src/editor/` | 과제 메모 편집기 화면 |
+| `src/widget/KnouWidget.js` | 아이패드·아이폰 Scriptable 위젯 스크립트 (빌드에 포함, 릴리즈 첨부) |
 
 ## 빌드 (Windows, Node.js 18 이상)
 
@@ -38,10 +42,11 @@ MyKNOU 대시보드(m.knou.ac.kr)를 `Ctrl+S`로 저장한 뒤:
 node test\run_test.js "C:\경로\저장한_대시보드.html"
 ```
 
-Dropbox 내보내기 점검:
+Dropbox·과제 메모 점검:
 
 ```
 node test\dropbox_test.js
+node test\scope_test.js
 ```
 
 > 저장한 대시보드 HTML에는 이름·학번·이메일이 들어 있습니다. **저장소에 올리지 마세요.** (`.gitignore`로 막혀 있습니다)
@@ -77,9 +82,11 @@ node test\dropbox_test.js
 [Dropbox App Console](https://www.dropbox.com/developers/apps)에 만든 **Scoped access · App folder** 앱입니다.
 
 - Permissions: `files.content.read`, `files.content.write`
-- Redirect URIs (두 개 모두 등록)
+- 앱 이름은 `KnouWidget`이고, 파일은 사용자 Dropbox의 `Apps\KnouWidget\`에 생깁니다.
+- Redirect URIs (세 개 모두 등록)
   - Chromium 계열: `https://akolhboefakmfcodlklbicmaiplebfgp.chromiumapp.org/` (`chromium_key.txt`로 고정된 ID)
   - Firefox: `https://1d7b9eef5f79d53ebe1a136a2d2775845bb15396.extensions.allizom.org/` (`knou_calendar@yonggary.local`의 SHA-1)
+  - 위젯(Scriptable): `scriptable:///run/KnouWidget` (스크립트 이름이 반드시 `KnouWidget`)
 - 개발 단계(Development) 앱이라 연결할 수 있는 사용자 수에 제한이 있습니다. 배포 범위가 넓어지면 Dropbox에 Production 신청이 필요합니다.
 - 확장 ID나 Gecko ID를 바꾸면 위 Redirect URI도 함께 바꿔야 합니다.
 - 위젯(Scriptable 등)도 **같은 앱 키**로 PKCE 인증을 받아야 같은 앱 폴더의 파일을 읽을 수 있습니다.
@@ -91,7 +98,9 @@ node test\dropbox_test.js
 ### 동작
 
 - **인증**: `identity.launchWebAuthFlow` + PKCE(S256), `token_access_type=offline`. 리디렉션 URI는 구글과 같은 `identity.getRedirectURL()`입니다. 갱신 토큰은 `storage.local`의 `ks_dropbox`, 접근 토큰(약 4시간)은 `storage.session`의 `ks_dbx_token`에 둡니다.
-- **호출 시점**: `sync.js`의 `markDone` (반영 완료, 또는 변경 없음). 연결하지 않았으면 아무것도 하지 않습니다. 실패해도 예외를 던지지 않고 `ks_dbx_last`에 기록합니다.
+- **호출 시점**: `sync.js`의 `markDone`(반영 완료, 또는 변경 없음). **예외는 하나**뿐으로, 과제 메모 편집기에서 저장한 직후입니다(`saveScope` → `exportAgenda`). 이때는 MyKNOU를 다시 읽지 않고 저장된 `ks_agenda`에 새 `notes`만 붙여 내보냅니다. 연결하지 않았으면 아무것도 하지 않습니다. 실패해도 예외를 던지지 않고 `ks_dbx_last`에 기록합니다.
+- **내보내기 순서** (`exportAgenda`): ① `knou_scope.txt` 양식 확인(`ensureScopeTxt`) → ② txt를 읽어 `notes` 만들기(`readNotes`, 실패하면 `notes` 없이 진행) → ③ `knou_agenda.json` 덮어쓰기 → ④ 위젯 스크립트 확인(`ensureWidget`, 실패해도 내보내기는 성공).
+- **rev 읽기**: `get_metadata`로 rev를 먼저 받고 `download`에 `path: "rev:<rev>"`를 넘겨, 내용과 rev가 어긋나지 않게 합니다(브라우저에서는 `Dropbox-API-Result` 헤더를 읽을 수 없는 경우가 있어서).
 - **권한**: 앱 폴더 범위만 씁니다. Dropbox API는 CORS를 지원하므로 `host_permissions`를 추가하지 않았습니다.
 - **경로**: `Dropbox-API-Arg` 헤더는 ASCII만 허용하므로 파일 이름은 모두 영문입니다.
 
@@ -117,22 +126,48 @@ node test\dropbox_test.js
 - `due: true`면 `end`가 마감 시각, `false`면 `start`~`end`가 수업·시험 시간입니다. 시각은 모두 `+09:00`입니다.
 - 형성평가는 `course`가 `형성평가`입니다.
 
-`knou_scope.json` — 없을 때만 만들고 이후로는 사용자가 편집:
+- 1.6.0부터 과제 메모를 해석한 필드가 붙습니다. `format`은 1 그대로이며, 메모를 못 읽었으면 세 필드 모두 뺍니다.
 
 ```json
 {
-  "format": 1,
-  "semester": "2026-2",
-  "note": "…",
-  "items": [
-    { "course": "행정학개론", "kind": "기말평가", "scope": "" },
-    { "course": "컴퓨터의이해", "kind": "", "scope": "" }
-  ]
+  "notes": {
+    "인간과사회": { "mid": "", "final": "교재 3장의 …\nA4 3쪽 내외, …", "memo": "교재 2026 개정판 사용" }
+  },
+  "notesRev": "<knou_scope.txt의 Dropbox rev>",
+  "notesSavedAt": "2026-11-11T05:00:00.000Z"
 }
 ```
 
-- 과목마다 그 학기 평가(중간·기말)별로 한 칸, 평가 정보가 없는 과목은 `kind`가 빈 칸 하나입니다.
-- 이미 있으면 `semester`만 확인합니다. 값이 지금 학기와 다를 때만 `/archive/knou_scope_<학기>.json`으로 옮기고 새로 만듭니다. 값이 없거나 같으면 손대지 않습니다.
+### 과제 메모 `knou_scope.txt` (1.6.0~)
+
+해석과 저장은 `lib/scope.js`가 맡습니다. **위젯 `KnouWidget.js`의 `parseScopeTxt` / `memoOf` / `scopeToTxt`와 글자 하나까지 같아야 합니다.** 한쪽만 고치면 확장과 위젯이 번갈아 저장할 때 파일이 흔들리므로 반드시 둘 다 고치세요. `test/scope_test.js`가 위젯 스크립트에서 세 함수를 직접 꺼내 결과를 비교합니다.
+
+- **읽기**: BOM 제거, `\r?\n`로 나눔. 공백을 모두 지운 값이 과목명(공백 지운 값)과 같은 줄이 과목 제목입니다. `^(중간평가|기말평가|기말시험|중간|기말)\s*[:：]\s*(.*)$`가 평가 표시이고, `중간…`이면 중간평가, 나머지는 기말평가입니다. 표시부터 다음 표시나 다음 과목 전까지가 내용입니다. 과목 제목 바로 아래, 표시 앞의 줄은 과목 메모이고, 첫 과목 위의 줄은 머리말입니다. 같은 과목·같은 종류가 두 번 나오면 빈 줄 하나를 사이에 두고 이어 붙입니다.
+- **저장 모양**: 머리말 → 빈 줄 → 과목마다 `과목명` / 과목 메모(있을 때만) / `중간평가: …` / `기말평가: …` / 빈 줄. 내용이 비어도 평가 줄은 남깁니다. LF, UTF-8, BOM 없음입니다.
+- **양식**: 파일이 없을 때만 `<학기>학기 과제 메모 — 첫 과목명 위에 적은 내용은 위젯에 나오지 않습니다.` 머리말과 빈 평가 줄로 만듭니다.
+- **학기 전환**: 머리말 **첫 줄 맨 앞의 `YYYY-N학기`**가 지금 학기와 다를 때만 `/archive/knou_scope_<학기>.txt`로 옮기고 새 양식을 만듭니다. 머리말이 없거나 학기를 못 읽으면 손대지 않습니다.
+- **편집기** (`editor/editor.html`): 팝업 [📝 과제 메모](Dropbox 연결 시에만 보임)로 엽니다. 열 때마다 `scopeLoad`로 최신 내용과 rev를 받고, `scopeSave`는 `mode: update(rev)`(파일이 없으면 `add`)로만 저장합니다. 409 `conflict`이면 덮어쓰지 않습니다. 이때 내가 바꾼 칸만 txt 모양으로 보여 주고 클립보드에 복사한 뒤, "새 내용 불러오고 내 변경 다시 채우기"를 고르면 **내가 바꾼 칸만** 새 내용 위에 다시 채웁니다.
+- 옛 `knou_scope.json`은 만들지 않고 지우지도 않습니다. txt가 없을 때 편집기의 시작값으로만 씁니다.
+
+### 캘린더 설명란 (1.6.0 결정)
+
+`schedule.build(knou, settings, notes)`가 일정 설명란 맨 위에 메모를 넣습니다. 형식은 `📝 기말평가` / `📌 과목 메모` 머리줄 + 내용, 빈 줄, `────────`, 원래 설명입니다.
+
+| 메모 | 들어가는 일정 |
+| --- | --- |
+| 평가 내용(중간·기말) | 그 평가의 **제출기간** 일정(시험형은 시험 일정). **마감 일정에는 넣지 않음** — 단, 제출기간 일정이 없을 때(`showPeriod` 끔, 하루짜리 기간)는 내용이 사라지지 않게 마감 일정에 넣음 |
+| 과목 메모 | 그 과목의 모든 일정(출석수업·중간·기말, 마감 포함) |
+
+- 설명란이 약 8,000자를 넘으면 메모를 자르고 `… (전체는 위젯·편집기에서)`를 붙입니다.
+- **메모만 바뀐 경우**: 일정마다 `ks_base`(메모를 넣기 전 모양의 해시)를 저장합니다. `ks_base`는 같고 `ks_hash`만 다르면 `diff`가 `update`로 분류해, 일정을 다시 만들지 않고 `PATCH`로 설명란과 해시만 고칩니다(팝업에 "메모" 칩으로 표시). 1.5.0 일정에는 `ks_base`가 없으므로 `ks_hash`를 base로 봅니다. 그래서 업데이트 직후에도 교체가 일어나지 않습니다.
+- 동기화 때 메모는 Dropbox에서 새로 읽습니다(15초 제한). 못 읽으면 마지막으로 읽은 `ks_notes`를 씁니다. 못 읽을 때마다 메모를 빼면 설명란이 매번 바뀌기 때문입니다.
+
+### 위젯 스크립트 배포
+
+- 원본은 `src/widget/KnouWidget.js`입니다. 첫 줄 `// KnouWidget v<버전> —`과 `const WIDGET_VERSION = "<버전>";`이 같아야 하며, 다르면 `node build.js`가 멈춥니다.
+- 빌드하면 확장 안(`widget/KnouWidget.js`)과 릴리즈 첨부용 `dist/KnouWidget.js`에 함께 들어갑니다. 첨부 파일 이름은 고정이라 `https://github.com/yonggary-1/knou_calendar/releases/latest/download/KnouWidget.js`가 늘 최신을 가리킵니다.
+- 내보낼 때 앱 폴더의 `/KnouWidget.js`가 없거나 버전이 다를 때만 올립니다. 마지막으로 확인한 rev·버전을 `ks_widget`에 두어, rev가 같으면 내려받지도 않습니다.
+- 위젯을 새 버전으로 바꾸려면 `src/widget/KnouWidget.js`만 교체하고 확장을 릴리즈하면 됩니다.
 
 ## 파이어폭스 배포
 
@@ -151,4 +186,4 @@ node test\dropbox_test.js
    - 교체는 새 일정을 먼저 넣고 옛 일정을 지우는 순서로 합니다.
    - 지난 학기 일정은 건드리지 않습니다.
 4. 미리보기에서 사용자가 확인하면 반영하고, 팝업의 "남은 일정"을 갱신합니다.
-5. Dropbox를 연결했으면 남은 일정을 `knou_agenda.json`으로 내보내고, `knou_scope.json`이 없으면 양식을 만듭니다.
+5. Dropbox를 연결했으면 `knou_scope.txt` 양식을 확인하고, 과제 메모를 `notes`로 붙여 `knou_agenda.json`을 내보낸 뒤, 위젯 스크립트 버전을 확인합니다. 과제 메모는 3단계의 일정 설명란에도 들어갑니다(동기화 때 Dropbox에서 읽음).

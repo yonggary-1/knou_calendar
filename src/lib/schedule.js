@@ -283,8 +283,51 @@
     return items.sort((x, y) => (x.end < y.end ? -1 : x.end > y.end ? 1 : 0));
   }
 
-  // knou: KS.knou가 만든 결과, settings: 사용자 설정
-  function build(knou, settings) {
+  // ---------- 과제 메모 → 설명란 ----------
+  // 사용자 결정 (1.6.0):
+  //  - 평가 내용: 그 평가의 **제출기간** 일정에만 (마감 일정에는 넣지 않음). 시험형은 시험 일정.
+  //    제출기간 일정이 없을 때(설정에서 끔, 하루짜리 기간)만 내용이 사라지지 않게 마감 일정에 넣는다.
+  //  - 과목 메모: 그 과목의 모든 일정 (출석수업 포함)
+  //  설명란 맨 위에 머리줄 + 내용, 그 아래 원래 설명. 설명란 한도(약 8,192자)를 넘으면 메모를 자른다
+  const DESC_LIMIT = 8000;
+  const CUT = '\n… (전체는 위젯·편집기에서)';
+  function roleOf(ev, kind) {
+    if (kind === 'class') return 'class';
+    if (/ 제출기간$/.test(ev.summary)) return 'period';
+    if (/^\[마감\]/.test(ev.summary)) return 'deadline';
+    return 'exam';
+  }
+  function withNotes(ev, parts) {
+    const add = parts.filter(Boolean).join('\n\n');
+    if (!add) return;
+    const base = ev.description || '';
+    const room = DESC_LIMIT - base.length - 4;
+    const head = add.length > room ? add.slice(0, Math.max(0, room - CUT.length)).replace(/\s+$/, '') + CUT : add;
+    ev.description = head + '\n\n────────\n' + base;
+  }
+  function applyNotes(g, course, notes) {
+    const n = notes?.[course];
+    if (!n) return;
+    const memo = String(n.memo || '').trim();
+    const memoPart = memo ? `📌 과목 메모\n${memo}` : '';
+    if (g.kind === 'class') {
+      for (const ev of g.events) withNotes(ev, [memoPart]);
+      return;
+    }
+    if (g.kind !== 'mid' && g.kind !== 'final') return;
+    const body = String(n[g.kind] || '').trim();
+    const evalPart = body ? `📝 ${g.kind === 'mid' ? '중간평가' : '기말평가'}\n${body}` : '';
+    const roles = g.events.map((ev) => roleOf(ev, g.kind));
+    const hasPeriod = roles.includes('period');
+    g.events.forEach((ev, i) => {
+      const r = roles[i];
+      const getsEval = r === 'period' || r === 'exam' || (r === 'deadline' && !hasPeriod);
+      withNotes(ev, [getsEval ? evalPart : '', memoPart]);
+    });
+  }
+
+  // knou: KS.knou가 만든 결과, settings: 사용자 설정, notes: 과제 메모 { 과목명: { mid, final, memo } } (없으면 null)
+  function build(knou, settings, notes) {
     const groups = [];
     const places = new Map();
     const semesters = new Set();
@@ -298,7 +341,7 @@
         buildEvalGroup(c, 'mid', c.mid, settings),
         buildEvalGroup(c, 'final', c.final, settings),
       ];
-      for (const g of parts) if (g) groups.push({ ...g, key: `${sem}|${c.name}|${g.kind}`, semester: sem });
+      for (const g of parts) if (g) groups.push({ ...g, key: `${sem}|${c.name}|${g.kind}`, semester: sem, course: c.name });
     }
 
     const firstSem = [...semesters][0];
@@ -306,10 +349,13 @@
     if (fg) groups.push({ ...fg, key: `${firstSem}|_|formative`, semester: firstSem });
 
     for (const g of groups) {
+      for (const ev of g.events) if (ev.location === undefined) delete ev.location;
+      // base: 메모를 넣기 전 모양. 메모만 바뀌면 base가 같으므로 일정을 다시 만들지 않고 설명란만 고친다
+      g.base = cyrb53(stable(g.events));
+      if (g.course) applyNotes(g, g.course, notes);
       g.hash = cyrb53(stable(g.events));
       for (const ev of g.events) {
-        if (ev.location === undefined) delete ev.location;
-        ev.extendedProperties = { private: { ks_v: SCHEMA, ks_group: g.key, ks_hash: g.hash } };
+        ev.extendedProperties = { private: { ks_v: SCHEMA, ks_group: g.key, ks_hash: g.hash, ks_base: g.base } };
       }
     }
     return {
@@ -330,8 +376,12 @@
       if (!byGroup.has(p.ks_group)) byGroup.set(p.ks_group, []);
       byGroup.get(p.ks_group).push(ev);
     }
-    const inserts = [], deletes = [], items = [];
-    const counts = { add: 0, replace: 0, delete: 0, same: 0 };
+    const inserts = [], deletes = [], patches = [], items = [];
+    const counts = { add: 0, replace: 0, update: 0, delete: 0, same: 0 };
+    // 1.5.0 이전 일정에는 ks_base가 없다. 그때는 메모가 없던 시절이라 ks_hash가 곧 base다
+    const baseOf = (e) => e.extendedProperties.private.ks_base || e.extendedProperties.private.ks_hash;
+    const startOf = (e) => (e.start?.dateTime ? Date.parse(e.start.dateTime) : Date.parse(e.start?.date || 0)) + '|' + (e.summary || '');
+    const byStart = (a, b) => (startOf(a) < startOf(b) ? -1 : startOf(a) > startOf(b) ? 1 : 0);
     const wanted = new Set();
 
     for (const g of built.groups) {
@@ -343,6 +393,12 @@
         items.push({ op: 'add', label: g.label, when: g.when });
       } else if (ex.length === g.events.length && ex.every((e) => e.extendedProperties.private.ks_hash === g.hash)) {
         counts.same++;
+      } else if (ex.length === g.events.length && ex.every((e) => baseOf(e) === g.base)) {
+        // 일정 모양은 그대로, 과제 메모(설명란)만 바뀜 → 설명란만 고친다 (알림·일정 ID 유지)
+        counts.update++;
+        const olds = [...ex].sort(byStart), news = [...g.events].sort(byStart);
+        olds.forEach((o, i) => patches.push({ id: o.id, body: { description: news[i].description, extendedProperties: news[i].extendedProperties } }));
+        items.push({ op: 'update', label: g.label, when: g.when });
       } else {
         counts.replace++;
         inserts.push(...g.events);
@@ -362,7 +418,7 @@
       items.push({ op: 'delete', label: f.summary || key, when: st ? md(st.slice(0, 10)) + (f.start?.dateTime ? ' ' + st.slice(11, 16) : '') : '' });
     }
 
-    return { inserts, deletes, items, counts, total: counts.add + counts.replace + counts.delete };
+    return { inserts, deletes, patches, items, counts, total: counts.add + counts.replace + counts.update + counts.delete };
   }
 
   KS.schedule = { parsePeriod, parseYmd, parseHours, autoPlace, resolvePlace, build, buildAgenda, diff };

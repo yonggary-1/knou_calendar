@@ -9,7 +9,7 @@ const SRC = path.join(__dirname, '..', 'src');
 const ctx = { console: { log() {}, info() {}, warn() {}, error() {} }, URL, URLSearchParams, crypto: globalThis.crypto, setTimeout };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
-for (const f of ['lib/env.js', 'lib/core.js', 'lib/settings.js', 'lib/log.js', 'lib/nuxt.js', 'lib/schedule.js', 'lib/knou.js']) {
+for (const f of ['lib/env.js', 'lib/core.js', 'lib/settings.js', 'lib/log.js', 'lib/nuxt.js', 'lib/schedule.js', 'lib/scope.js', 'lib/knou.js']) {
   vm.runInContext(fs.readFileSync(path.join(SRC, f), 'utf8'), ctx, { filename: f });
 }
 const KS = ctx.KS;
@@ -123,3 +123,85 @@ for (const it of ag) out(`   - ${it.course} | ${it.label}${it.detail ? ' · ' + 
 assert.ok(ag.every((it) => it.end && /\+09:00$/.test(it.end)));
 assert.ok(ag.some((it) => it.kind === 'class' && it.place === '서울남부학습센터 301호'));
 out('   ✓ 목록 형식 확인');
+
+// ---- 7. 과제 메모 → 캘린더 설명란 (1.6.0 결정) ----
+//  평가 내용: 제출기간 일정에만 (마감 X). 시험형은 시험 일정. 제출기간 일정이 없으면 마감 일정에.
+//  과목 메모: 그 과목 일정 전부 (출석수업 포함)
+{
+  const assignCourse = r.courses.find((c) => c.final && !/시험/.test(c.final.type) && KS.schedule.parsePeriod(c.final.period)?.range && c.attendance.sessions.length);
+  assert.ok(assignCourse, '과제형 기말 + 출석수업이 있는 과목이 필요');
+  const name = assignCourse.name;
+  const notes = { [name]: { mid: '', final: '교재 3장 사례 분석\nA4 3쪽', memo: '교재 2026 개정판' } };
+  const b2 = KS.schedule.build(r, settings, notes);
+  const fg = b2.groups.find((g) => g.course === name && g.kind === 'final');
+  const cg = b2.groups.find((g) => g.course === name && g.kind === 'class');
+  const period = fg.events.find((e) => / 제출기간$/.test(e.summary));
+  const deadline = fg.events.find((e) => /^\[마감\]/.test(e.summary));
+  assert.ok(period.description.startsWith('📝 기말평가\n교재 3장 사례 분석\nA4 3쪽\n\n📌 과목 메모\n교재 2026 개정판\n\n────────\n'), period.description.slice(0, 80));
+  assert.ok(!deadline.description.includes('📝'), '마감 일정에는 평가 내용 없음');
+  assert.ok(deadline.description.startsWith('📌 과목 메모\n교재 2026 개정판'), '마감 일정에도 과목 메모');
+  assert.ok(cg.events.every((e) => e.description.startsWith('📌 과목 메모\n교재 2026 개정판')), '출석수업에 과목 메모');
+  assert.ok(!cg.events.some((e) => e.description.includes('📝')), '출석수업에 평가 내용 없음');
+  out(`[7] 설명란: ${name} — 제출기간에 평가 내용, 마감엔 과목 메모만, 출석수업에 과목 메모 ✓`);
+
+  // 제출기간 일정을 끈 경우 → 평가 내용이 마감 일정으로
+  const b3 = KS.schedule.build(r, { ...settings, showPeriod: false }, notes);
+  const d3 = b3.groups.find((g) => g.course === name && g.kind === 'final').events;
+  assert.strictEqual(d3.length, 1);
+  assert.ok(d3[0].description.startsWith('📝 기말평가'), '제출기간이 없으면 마감 일정에 평가 내용');
+  out('   제출기간 끔 → 평가 내용이 마감 일정으로 ✓');
+
+  // 시험형 → 시험 일정
+  const examCourse = r.courses.find((c) => c.final && /시험|객관식|주관식/.test(c.final.type) && !/과제/.test(c.final.type) && KS.schedule.parsePeriod(c.final.period));
+  if (examCourse) {
+    const b4 = KS.schedule.build(r, settings, { [examCourse.name]: { mid: '', final: '1~7장', memo: '' } });
+    const eg = b4.groups.find((g) => g.course === examCourse.name && g.kind === 'final');
+    assert.ok(eg.events[0].description.startsWith('📝 기말평가\n1~7장'));
+    out(`   시험형(${examCourse.name}) → 시험 일정에 평가 내용 ✓`);
+  }
+  // 저장 페이지에는 날짜가 공지된 시험형이 없으므로 가상의 과목으로도 확인
+  {
+    const fake = { ...r, courses: [{ ...r.courses[0], name: '가상시험과목', attendance: { sessions: [] }, mid: null, final: { type: '기말시험(객관식)', period: '2026.12.12 10:00-12.12 11:00' } }] };
+    const b4 = KS.schedule.build(fake, settings, { 가상시험과목: { mid: '', final: '1~7장', memo: '계산기 지참' } });
+    const ev = b4.groups.find((g) => g.kind === 'final').events;
+    assert.strictEqual(ev.length, 1);
+    assert.ok(ev[0].summary.startsWith('[기말시험]'));
+    assert.ok(ev[0].description.startsWith('📝 기말평가\n1~7장\n\n📌 과목 메모\n계산기 지참'));
+    out('   시험형(가상 과목) → 시험 일정에 평가 내용·과목 메모 ✓');
+  }
+
+  // 아주 긴 메모 → 잘라서 넣음
+  const long = '가'.repeat(12000);
+  const b5 = KS.schedule.build(r, settings, { [name]: { mid: '', final: long, memo: '' } });
+  const p5 = b5.groups.find((g) => g.course === name && g.kind === 'final').events.find((e) => / 제출기간$/.test(e.summary));
+  assert.ok(p5.description.length <= 8192 && p5.description.includes('… (전체는 위젯·편집기에서)'), '길이 ' + p5.description.length);
+  out(`   긴 메모 → ${p5.description.length}자로 잘림 ✓`);
+
+  // 메모만 바뀌면 일정을 다시 만들지 않고 설명란만 고친다
+  let k = 0;
+  const cal = b2.groups.flatMap((g) => g.events.map((e) => ({ ...JSON.parse(JSON.stringify(e)), id: 'm' + k++ })));
+  const notes2 = { [name]: { ...notes[name], final: '교재 4장으로 바뀜' } };
+  let dd = KS.schedule.diff(KS.schedule.build(r, settings, notes2), cal);
+  // 기말평가 내용만 바뀌었으니 그 과목의 기말 그룹 하나만 (과목 메모는 그대로라 출석수업은 변화 없음)
+  assert.deepStrictEqual([dd.counts.add, dd.counts.replace, dd.counts.delete, dd.counts.update], [0, 0, 0, 1]);
+  assert.strictEqual(dd.patches.length, fg.events.length);
+  const pp = dd.patches.find((p) => p.body.description.includes('교재 4장'));
+  assert.ok(pp && cal.find((e) => e.id === pp.id).summary.endsWith('제출기간'), '제출기간 일정의 설명란을 고침');
+  assert.strictEqual(dd.inserts.length + dd.deletes.length, 0);
+  out(`   메모만 바뀜 → 교체 없이 설명란 수정 ${dd.patches.length}건 (그룹 ${dd.counts.update}) ✓`);
+
+  // 1.5.0 시절 일정(ks_base 없음, 메모 없음)에서 메모가 처음 생겨도 교체가 아니라 설명란 수정
+  const oldCal = built.groups.flatMap((g) => g.events.map((e) => {
+    const c = JSON.parse(JSON.stringify(e));
+    c.extendedProperties = { private: { ks_v: '1', ks_group: g.key, ks_hash: g.hash } };
+    return { ...c, id: 'o' + k++ };
+  }));
+  dd = KS.schedule.diff(b2, oldCal);
+  assert.strictEqual(dd.counts.replace, 0, '1.5.0 일정을 교체하지 않음');
+  // 그 과목의 모든 그룹(출석수업·중간·기말)에 과목 메모가 새로 들어가므로 전부 설명란 수정
+  assert.strictEqual(dd.counts.update, b2.groups.filter((g) => g.course === name).length);
+  // 메모가 없으면 1.5.0 일정과 완전히 같음 (업데이트해도 아무 변화 없음)
+  assert.strictEqual(KS.schedule.diff(KS.schedule.build(r, settings, null), oldCal).total, 0);
+  out('   1.5.0에서 올라와도 교체 없이 설명란만, 메모 없으면 변경 0 ✓');
+}
+out('설명란 테스트 통과');

@@ -117,4 +117,8 @@ function pack(target, zipName, prefix) {
 pack('chromium', 'knou_calendar_chromium.zip', 'knou_calendar_chromium/');
 pack('firefox', 'knou_calendar_firefox.zip', '');
 
+// 릴리즈 첨부: 위젯 스크립트 그대로 (이름 고정 → releases/latest/download/KnouWidget.js 주소가 늘 통함)
+fs.copyFileSync(path.join(ROOT, 'src', 'widget', 'KnouWidget.js'), path.join(DIST, 'KnouWidget.js'));
+console.log('복사 완료: dist/KnouWidget.js');
+
 module.exports = { makeZip, crc32 };

@@ -14,11 +14,12 @@
         <img src="../icons/icon32.png" alt="" width="22" height="22">
         <div>
           <h1>과제 메모</h1>
-          <p class="muted small" id="where">Dropbox › Apps › KnouWidget › knou_scope.txt</p>
+          <p class="muted small" id="where"></p>
         </div>
       </div>
       <div class="acts">
         <span id="state" class="muted small" aria-live="polite"></span>
+        <button id="btnExport" disabled title="화면의 내용을 txt 파일로 저장합니다 (저장 위치를 묻습니다)">txt 내보내기</button>
         <button id="btnReload">다시 불러오기</button>
         <button id="btnSave" class="primary" disabled>저장</button>
       </div>
@@ -27,7 +28,7 @@
 
   <main class="wrap">
     <div id="banner" hidden></div>
-    <p class="muted small" id="help">과목마다 중간평가·기말평가·과목 메모를 적습니다. 서식 없는 글자만 저장되며, 아이패드 위젯과 메모장에서 고친 내용과 같은 파일입니다. 저장하면 위젯에 바로 반영되고, 구글 캘린더 설명란에는 다음 동기화 때 반영됩니다.</p>
+    <p class="muted small" id="help"></p>
     <nav id="jump" class="jump" aria-label="과목으로 이동"></nav>
     <div id="list"></div>
   </main>
@@ -35,6 +36,7 @@
   <script src="../lib/env.js"></script>
   <script src="../lib/core.js"></script>
   <script src="../ui/dom.js"></script>
+  <script src="../lib/scope.js"></script>
   <script src="editor.js"></script>
 </body>
 </html>

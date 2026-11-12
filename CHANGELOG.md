@@ -2,6 +2,15 @@
 
 v1.3.0이 GitHub에 올린 첫 릴리즈입니다. 그 이전 버전은 공개 전 개발 과정에서만 쓰였습니다.
 
+## 1.6.2
+- **Dropbox 없이 과제 메모**: 연결하지 않았으면 과제 메모를 브라우저의 `storage.sync`에 저장합니다(브라우저 동기화를 켜면 같은 계정의 다른 PC에서도 보임). 팝업의 **📝 과제 메모** 버튼이 항상 보입니다. 캘린더 설명란에도 그대로 들어갑니다.
+- **Dropbox 백업**: 연결했으면 기존처럼 `knou_scope.txt`가 원본이고, 읽거나 저장할 때마다 브라우저에 백업합니다. Dropbox에 닿지 못하면 편집기는 백업을 보여 주고 브라우저에 저장하며, 다시 닿으면 자동으로 올립니다. 그사이 Dropbox 쪽도 바뀌었으면 덮어쓰지 않고 편집기에서 고르게 합니다.
+- Dropbox를 처음 연결하면 브라우저에 적어 둔 메모로 `knou_scope.txt`를 만듭니다.
+- 편집기에 **txt 내보내기** 버튼을 넣었습니다. 저장 위치를 묻는 창을 띄우고(Chromium `showSaveFilePicker`, Firefox `downloads.download({ saveAs: true })`), 화면의 내용을 `knou_scope_<학기>.txt`로 저장합니다. Firefox 빌드에만 `downloads` 권한이 추가됩니다.
+- 편집기 제목 아래에 저장 위치를 표시합니다(Dropbox / 이 브라우저 / 이 브라우저의 백업).
+- 새 모듈 `lib/scopestore.js`(조각 저장), `lib/memo.js`(원본 결정·백업·충돌). `loadScope`/`saveScope`는 `memo.js`로 옮겼습니다(이름은 유지).
+- 테스트: `test/memo_test.js`(11개 시나리오), 공용 `test/harness.js`(storage.sync 한도 흉내), `test/dropbox_test.js`에 백업으로 시작하는 경우 추가.
+
 ## 1.6.1
 - 위젯 스크립트를 **KnouWidget v1.1.0**으로 바꿨습니다(`src/widget/KnouWidget.js`). 확장 코드는 바뀌지 않았습니다.
   - 확장이 넣은 과제 메모(`knou_agenda.json`의 `notes`)를 우선 씁니다. `knou_scope.txt`의 rev가 `notesRev`와 같으면 txt를 내려받지 않고, 다르면(위젯·메모장에서 고친 뒤 아직 동기화 전) txt를 직접 읽습니다.

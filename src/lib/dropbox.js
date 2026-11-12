@@ -302,21 +302,28 @@
   // knou_scope.txt 양식: 없을 때만 만든다. 머리말의 학기가 지금 학기와 다를 때만 옛 파일을 archive로 옮기고 새로 만든다
   async function ensureScopeTxt(agenda) {
     const sem = agenda.semester || '';
-    const text = KS.scope.templateTxt(sem, coursesOf(agenda));
+    // 없으면 이번 학기 브라우저 메모(Dropbox 없이 써 온 것)로, 그것도 없으면 빈 양식으로 만든다
+    const text = KS.memo ? await KS.memo.seedText(agenda) : KS.scope.templateTxt(sem, coursesOf(agenda));
     const first = await upload(SCOPE_TXT_PATH, text, 'add');
     if (first.ok) return 'created';
     if (!sem) return 'kept';
     const oldSem = KS.scope.semesterOfTxt(await download(SCOPE_TXT_PATH));
     if (!oldSem || oldSem === sem) return 'kept'; // 머리말이 없거나 학기를 못 읽으면 사용자 것으로 보고 손대지 않음
     await move(SCOPE_TXT_PATH, `/archive/knou_scope_${oldSem.replace(/[^0-9A-Za-z_-]/g, '')}.txt`);
-    const again = await upload(SCOPE_TXT_PATH, text, 'add');
+    const again = await upload(SCOPE_TXT_PATH, KS.scope.templateTxt(sem, coursesOf(agenda)), 'add'); // 새 학기는 항상 빈 양식
     return again.ok ? 'renewed' : 'kept';
   }
 
   // 과제 메모를 읽어 notes로. 실패하면 null (일정 내보내기는 계속)
   async function readNotes(agenda) { // agenda: { courses } 만 있어도 됨
     try {
-      const { text, rev } = await readTextWithRev(SCOPE_TXT_PATH);
+      let { text, rev } = await readTextWithRev(SCOPE_TXT_PATH);
+      if (KS.memo) {
+        // 브라우저 백업을 맞춘다: 연결이 끊긴 동안 브라우저에서 고친 내용이 있으면 여기서 Dropbox에 올림
+        const x = await KS.memo.reconcile(text, rev, agenda.semester || '');
+        text = x.text;
+        rev = x.rev;
+      }
       if (text === null) return null;
       const notes = { notes: KS.scope.notesOf(text, coursesOf(agenda)), rev, at: Date.now() };
       await KS.ext.storage.local.set({ ks_notes: notes }); // 다음 동기화의 캘린더 설명란용
@@ -384,46 +391,14 @@
     }
   }
 
-  // ---------- 과제 메모 편집기 ----------
-  async function loadScope() {
-    if (!(await getLink())?.refresh) return { connected: false };
-    const agenda = (await KS.ext.storage.local.get('ks_agenda')).ks_agenda;
-    const courses = coursesOf(agenda);
-    if (!courses.length) return { connected: true, courses: [] };
-    const { text, rev } = await readTextWithRev(SCOPE_TXT_PATH);
-    let parsed;
-    if (text !== null) parsed = KS.scope.parseScopeTxt(text, courses);
-    else {
-      // txt가 아직 없으면 옛 json 내용으로 시작 (저장하면 txt가 새로 생김)
-      let old = null;
-      try { old = JSON.parse((await download(SCOPE_PATH)) || 'null'); } catch { old = null; }
-      parsed = { items: old?.items || [], preamble: KS.scope.headerFor(agenda?.semester || '') };
-    }
-    const memos = {};
-    for (const c of courses) memos[c] = KS.scope.memoOf(parsed, c);
-    return { connected: true, courses, preamble: parsed.preamble, memos, rev, exists: text !== null, semester: agenda?.semester || '' };
-  }
-
-  // 저장 → 성공하면 위젯용 JSON을 바로 다시 내보낸다 (예외 규칙: markDone 밖에서 내보내는 유일한 경우)
-  async function saveScope({ preamble, memos, rev }) {
-    const agenda = (await KS.ext.storage.local.get('ks_agenda')).ks_agenda;
-    const courses = coursesOf(agenda);
-    const text = KS.scope.scopeToTxt(preamble || '', courses, memos || {});
-    const r = await writeTextIfUnchanged(SCOPE_TXT_PATH, text, rev || null);
-    if (!r.ok) {
-      KS.log('warn', '과제 메모 저장 충돌 — 저장하지 않음');
-      return { ok: false, conflict: true };
-    }
-    KS.log('info', '과제 메모 저장', { courses: courses.length });
-    let exported = null;
-    try { exported = await exportAgenda({ quiet: true }); } catch { exported = null; }
-    return { ok: true, rev: r.rev, exported };
-  }
+  // ---------- 과제 메모 편집기 ---------- (1.6.2부터 lib/memo.js가 담당. 예전 이름은 그대로 둠)
+  const loadScope = () => KS.memo.load();
+  const saveScope = (x) => KS.memo.save({ mode: 'dropbox', ...x });
 
   async function status() {
     const [link, last] = await Promise.all([getLink(), KS.ext.storage.local.get('ks_dbx_last')]);
     return { connected: !!link?.refresh, email: link?.email || '', last: last.ks_dbx_last || null };
   }
 
-  KS.dropbox = { connect, disconnect, exportAgenda, readNotes, status, agendaFile, scopeTemplate, loadScope, saveScope, ensureWidget, readTextWithRev, AGENDA_PATH, SCOPE_PATH, SCOPE_TXT_PATH, WIDGET_PATH };
+  KS.dropbox = { connect, disconnect, exportAgenda, readNotes, status, agendaFile, scopeTemplate, loadScope, saveScope, ensureWidget, readTextWithRev, writeTextIfUnchanged, downloadText: download, coursesOf, AGENDA_PATH, SCOPE_PATH, SCOPE_TXT_PATH, WIDGET_PATH };
 })();

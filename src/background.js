@@ -58,8 +58,10 @@
       } else await ext.tabs.create({ url });
       return { ok: true };
     },
-    scopeLoad: () => wrap(KS.dropbox.loadScope),
-    scopeSave: (msg) => wrap(() => KS.dropbox.saveScope(msg.data || {})),
+    // 1.6.2: Dropbox 연결 여부와 관계없이 열림 (연결 안 함 → 브라우저 저장, 연결 → Dropbox + 브라우저 백업)
+    scopeLoad: () => wrap(KS.memo.load),
+    scopeSave: (msg) => wrap(() => KS.memo.save(msg.data || {})),
+    scopeResolve: (msg) => wrap(() => KS.memo.resolve(msg.data || {})),
     hideDropbox: async () => {
       await KS.saveSettings({ dropboxHidden: true });
       KS.log('info', 'Dropbox 줄 숨김 (사용 안 함)');

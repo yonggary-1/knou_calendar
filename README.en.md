@@ -14,7 +14,8 @@ A browser extension that automatically copies **attendance classes, midterm, fin
   - Exam-type assessments: exam time. It is added at the next sync once the date is announced.
   - Formative assessment: study period and deadline.
 - **Change tracking**: detects campus changes, schedule changes, and dropped courses, and replaces or removes only the affected course's events. You review a preview before anything is applied.
-- **Assignment notes and widget (optional)**: write per-course assignment topics and exam scope in `knou_scope.txt` in Dropbox. You can edit it in the extension's editor, the iPad widget, or Notepad, and the notes also go into Google Calendar event descriptions. Every sync exports upcoming tasks and notes for the widget and puts the widget script (KnouWidget) in Dropbox.
+- **Assignment notes**: write per-course assignment topics and exam scope; they go into Google Calendar event descriptions. Works without Dropbox (saved in the browser), and you can export them to a txt file.
+- **Widget (optional)**: with Dropbox connected, the notes become `knou_scope.txt` in Dropbox so you can also edit them in the iPad widget or Notepad. Every sync exports upcoming tasks and notes for the widget and puts the widget script (KnouWidget) in Dropbox.
 - **Upcoming tasks**: the extension popup lists remaining tasks per course with a D-day counter, and each item links to the matching KNOU page.
 - **Safety**
   - Events you created yourself and events from past semesters are never touched.
@@ -71,13 +72,24 @@ The files live in `Apps › KnouWidget` in your Dropbox (with the Dropbox deskto
 
 | File | Contents | Who edits it |
 | --- | --- | --- |
-| `knou_scope.txt` | **Assignment notes** — per-course midterm/final notes and a course memo | You (popup 📝 과제 메모, the widget, Notepad). The extension only creates a template when the file is missing |
+| `knou_scope.txt` | **Assignment notes** — per-course midterm/final notes and a course memo | You (popup 📝 과제 메모, the widget, Notepad). The extension only creates it when missing (from notes saved in the browser, if any) |
 | `knou_agenda.json` | The popup's upcoming tasks + `notes` parsed from the assignment notes | The extension (on every sync and whenever you save notes) |
 | `KnouWidget.js` | The widget script | The extension (only when missing or a different version) |
 
 ### Assignment notes
 
-Click **📝 과제 메모** at the bottom of the popup to open a full-size editor. For each course, type plain text into **중간평가 / 기말평가 / 과목 메모** (midterm / final / course memo) and click **저장** (Save) or press `Ctrl+S`.
+Click **📝 과제 메모** at the bottom of the popup to open a full-size editor. For each course, type plain text into **중간평가 / 기말평가 / 과목 메모** (midterm / final / course memo) and click **저장** (Save) or press `Ctrl+S`. Dropbox is not required.
+
+| State | Where notes are saved (shown under the editor title) |
+| --- | --- |
+| Dropbox not connected | **This browser** — if browser sync is on, other PCs signed in to the same Google account see them in Chrome too |
+| Dropbox connected | **`knou_scope.txt` in Dropbox** — every read and save is also backed up to this browser |
+| Connected but Dropbox unreachable right now | Shows **this browser's backup**; saving stores it in the browser. When Dropbox is reachable again (next sync or when you reopen the editor), it is uploaded automatically |
+
+- Notes written without Dropbox move into `knou_scope.txt` as they are when you connect Dropbox later.
+- If you edited in the browser while Dropbox was unreachable and the file was also edited in the widget or Notepad meanwhile, nothing is overwritten; the editor asks you to choose **Dropbox 내용 쓰기** (use Dropbox) or **브라우저 내용으로 Dropbox 덮어쓰기** (overwrite Dropbox with the browser's). The browser copy is kept aside even if you pick Dropbox.
+- The browser can hold about 100 KB (about 30,000 Korean characters). Connect Dropbox for longer notes.
+- **txt 내보내기** (Export txt) opens a save dialog and saves what's on screen (including unsaved changes) as `knou_scope_<semester>.txt`, in the same format as `knou_scope.txt`.
 
 - The widget picks up a save immediately. Google Calendar descriptions are updated **at the next sync**:
   - **Assessment notes** go into that assessment's **submission-period** event (the exam event for exam-type assessments), not the deadline event. If there is no submission-period event (turned off in Settings, or a one-day period), they go into the deadline event instead.
@@ -114,6 +126,7 @@ The extension's Dropbox app is still in **development** status, which limits how
 ## Privacy
 
 - Data read from KNOU is stored **only in your browser and your own Google Calendar**, plus your own Dropbox app folder if you turn on the Dropbox export. Nothing is sent to any other server.
+- Assignment notes are kept in the browser's extension sync storage (`storage.sync`). If browser sync is on, the browser vendor's sync (e.g. Google) carries them to your other PCs.
 - The Dropbox app-folder permission only reaches that one folder; the extension cannot read your other Dropbox files.
 - Calendar events contain only course names, times, places, and instructor contact details that are already published on the KNOU page.
 - The **bug report** file (Settings → 버그 리포트 저장) does not include your name, student ID, email, or course list.

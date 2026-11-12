@@ -109,7 +109,7 @@
 
     // ---- Dropbox (선택) ----
     const d = st.dropbox || {};
-    $('btnScope').hidden = !d.connected; // 과제 메모는 Dropbox의 knou_scope.txt를 고치므로 연결했을 때만
+    $('btnScope').hidden = false; // 1.6.2: Dropbox 없이도 씀 (연결 안 함 → 이 브라우저에 저장)
     $('btnScope').onclick = () => { send('openScopeEditor'); window.close(); };
     $('dbxRow').hidden = !!d.hidden || (!d.connected && !d.hasKey);
     if (d.connected) {

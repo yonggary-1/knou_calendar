@@ -10,7 +10,7 @@ const GECKO_ID = 'knou_calendar@yonggary.local';
 
 const BACKGROUND = [
   'lib/env.js', 'lib/core.js', 'lib/settings.js', 'lib/log.js', 'lib/nuxt.js',
-  'lib/schedule.js', 'lib/scope.js', 'lib/knou.js', 'lib/gauth.js', 'lib/gcal.js', 'lib/dropbox.js', 'lib/sync.js', 'background.js',
+  'lib/schedule.js', 'lib/scope.js', 'lib/scopestore.js', 'lib/memo.js', 'lib/knou.js', 'lib/gauth.js', 'lib/gcal.js', 'lib/dropbox.js', 'lib/sync.js', 'background.js',
 ];
 const SKIP = new Set(['manifest.base.json', 'chromium_key.txt', 'config.json']);
 
@@ -75,6 +75,8 @@ for (const target of ['chromium', 'firefox']) {
     fs.writeFileSync(path.join(out, 'sw.js'), `importScripts(${BACKGROUND.map((f) => JSON.stringify(f)).join(', ')});\n`);
   } else {
     m.background = { scripts: BACKGROUND };
+    // 과제 메모 txt 내보내기: Firefox는 showSaveFilePicker가 없어 downloads.download({ saveAs: true })로 저장 위치 창을 띄운다
+    m.permissions = [...new Set([...(m.permissions || []), 'downloads'])];
     m.browser_specific_settings = {
       gecko: { id: GECKO_ID, strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } },
       gecko_android: { strict_min_version: '142.0' },

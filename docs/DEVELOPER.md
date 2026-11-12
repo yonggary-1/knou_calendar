@@ -16,6 +16,10 @@ Knou calendar를 직접 빌드하거나, 자신의 구글 OAuth 클라이언트�
 | `test/dropbox_test.js` | 가짜 Dropbox로 내보내기·과제 메모 양식·위젯 배포·편집기 저장/충돌 점검 (네트워크 사용 안 함) |
 | `test/scope_test.js` | 확장과 위젯의 과제 메모 해석·저장 규칙이 같은지 위젯 스크립트와 직접 비교 |
 | `src/lib/scope.js` | 과제 메모 `knou_scope.txt` 해석·저장 (위젯과 같은 규칙) |
+| `src/lib/scopestore.js` | 과제 메모의 브라우저 저장소 (`storage.sync`, 조각 저장) |
+| `src/lib/memo.js` | 과제 메모의 원본 결정(Dropbox / 브라우저), 백업, 다시 연결 때 올리기·충돌 |
+| `test/memo_test.js` | 브라우저 저장·백업·끊김·다시 연결·충돌 시나리오 점검 |
+| `test/harness.js` | 테스트 공용 가짜 저장소(storage.sync 한도 흉내)·가짜 Dropbox |
 | `src/editor/` | 과제 메모 편집기 화면 |
 | `src/widget/KnouWidget.js` | 아이패드·아이폰 Scriptable 위젯 스크립트 (빌드에 포함, 릴리즈 첨부) |
 
@@ -46,6 +50,7 @@ Dropbox·과제 메모 점검:
 
 ```
 node test\dropbox_test.js
+node test\memo_test.js
 node test\scope_test.js
 ```
 
@@ -146,8 +151,27 @@ node test\scope_test.js
 - **저장 모양**: 머리말 → 빈 줄 → 과목마다 `과목명` / 과목 메모(있을 때만) / `중간평가: …` / `기말평가: …` / 빈 줄. 내용이 비어도 평가 줄은 남깁니다. LF, UTF-8, BOM 없음입니다.
 - **양식**: 파일이 없을 때만 `<학기>학기 과제 메모 — 첫 과목명 위에 적은 내용은 위젯에 나오지 않습니다.` 머리말과 빈 평가 줄로 만듭니다.
 - **학기 전환**: 머리말 **첫 줄 맨 앞의 `YYYY-N학기`**가 지금 학기와 다를 때만 `/archive/knou_scope_<학기>.txt`로 옮기고 새 양식을 만듭니다. 머리말이 없거나 학기를 못 읽으면 손대지 않습니다.
-- **편집기** (`editor/editor.html`): 팝업 [📝 과제 메모](Dropbox 연결 시에만 보임)로 엽니다. 열 때마다 `scopeLoad`로 최신 내용과 rev를 받고, `scopeSave`는 `mode: update(rev)`(파일이 없으면 `add`)로만 저장합니다. 409 `conflict`이면 덮어쓰지 않습니다. 이때 내가 바꾼 칸만 txt 모양으로 보여 주고 클립보드에 복사한 뒤, "새 내용 불러오고 내 변경 다시 채우기"를 고르면 **내가 바꾼 칸만** 새 내용 위에 다시 채웁니다.
-- 옛 `knou_scope.json`은 만들지 않고 지우지도 않습니다. txt가 없을 때 편집기의 시작값으로만 씁니다.
+- **편집기** (`editor/editor.html`): 팝업 [📝 과제 메모](1.6.2부터 항상 보임)로 엽니다. Dropbox 모드일 때: 열 때마다 `scopeLoad`로 최신 내용과 rev를 받고, `scopeSave`는 `mode: update(rev)`(파일이 없으면 `add`)로만 저장합니다. 409 `conflict`이면 덮어쓰지 않습니다. 이때 내가 바꾼 칸만 txt 모양으로 보여 주고 클립보드에 복사한 뒤, "새 내용 불러오고 내 변경 다시 채우기"를 고르면 **내가 바꾼 칸만** 새 내용 위에 다시 채웁니다.
+- 옛 `knou_scope.json`은 만들지 않고 지우지도 않습니다. txt가 없고 브라우저 메모도 없을 때 편집기의 시작값으로만 씁니다.
+
+### 과제 메모의 브라우저 저장 (1.6.2~)
+
+`lib/memo.js`가 원본을 정하고, `lib/scopestore.js`가 `storage.sync`에 씁니다.
+
+| mode | 조건 | 원본 | 저장 |
+| --- | --- | --- | --- |
+| `local` | Dropbox 연결 안 함 | 브라우저 | 브라우저 (`dirty: true`) |
+| `dropbox` | 연결됨, 읽기 성공 | `knou_scope.txt` | Dropbox(rev 확인) 후 브라우저에 백업(`dirty: false`, `baseRev` = 새 rev) |
+| `backup` | 연결됨, 읽기 실패(네트워크·인증) | 브라우저 백업 | 브라우저 (`dirty: true`, `baseRev` 유지) |
+
+- **기록**: `ks_scope_meta` = `{ v: 1, n, semester, savedAt, dirty, baseRev }`, 내용은 `ks_scope_0`…`ks_scope_<n-1>`(조각마다 UTF-8 6,000바이트 이하, JSON 이스케이프 몫 포함). 조각을 먼저 쓰고 meta를 나중에 씁니다. 조각이 하나라도 빠지면 `get()`은 null(깨진 내용을 쓰지 않음). 용량 초과는 `SCOPE_QUOTA` 오류. `storage.sync`가 없는 환경에서는 `storage.local`.
+- **백업 갱신**: Dropbox에서 읽을 때마다(`readNotes`, 편집기 열기) 내용·rev가 다르면 백업합니다. 단 `dirty`이면 덮어쓰지 않습니다.
+- **다시 연결** (`reconcile`, Dropbox에서 읽은 직후): `dirty`이고 ① txt 내용이 같으면 깨끗한 백업으로, ② txt가 없거나 rev가 `baseRev`와 같으면 브라우저 내용을 `update(rev)`로 올림, ③ 그 밖에는 `ks_scope_conflict`를 남기고 아무것도 덮어쓰지 않습니다. 편집기가 충돌을 보여 주고 `scopeResolve { choice: 'dropbox' | 'local' }`로 정합니다. 버리는 브라우저 내용은 `storage.local`의 `ks_scope_discarded`에 보관합니다. 충돌을 고르지 않고 Dropbox 쪽에 저장해도 같은 곳에 보관합니다.
+- **로컬 저장 충돌**: 열 때 받은 `savedAt`(`version`)과 지금 기록의 `savedAt`이 다르면(다른 창·다른 PC가 먼저 저장) 저장하지 않습니다.
+- **학기 전환**: 기록의 `semester`가 지금 학기와 다르면 `storage.local`의 `ks_scope_archive_<학기>`로 옮기고 지웁니다.
+- **txt 생성**: `ensureScopeTxt`는 txt가 없으면 이번 학기 브라우저 기록으로 만듭니다(없으면 빈 양식). 학기 전환으로 새로 만들 때는 항상 빈 양식입니다.
+- **캘린더 설명란** (`memo.notesForCalendar`): 연결됨 → Dropbox(15초 제한), 못 읽거나 연결 안 함 → 브라우저 기록, 그것도 없으면 `ks_notes` 캐시.
+- **txt 내보내기** (편집기): `KS.scope.scopeToTxt`로 화면 내용을 만들어 Chromium은 `showSaveFilePicker`, Firefox는 `downloads.download({ saveAs: true })`(빌드가 Firefox manifest에만 `downloads` 권한을 넣음), 둘 다 없으면 `<a download>`로 저장합니다. 파일 이름 `knou_scope_<학기>.txt`, LF.
 
 ### 캘린더 설명란 (1.6.0 결정)
 
@@ -188,4 +212,4 @@ node test\scope_test.js
    - 교체는 새 일정을 먼저 넣고 옛 일정을 지우는 순서로 합니다.
    - 지난 학기 일정은 건드리지 않습니다.
 4. 미리보기에서 사용자가 확인하면 반영하고, 팝업의 "남은 일정"을 갱신합니다.
-5. Dropbox를 연결했으면 `knou_scope.txt` 양식을 확인하고, 과제 메모를 `notes`로 붙여 `knou_agenda.json`을 내보낸 뒤, 위젯 스크립트 버전을 확인합니다. 과제 메모는 3단계의 일정 설명란에도 들어갑니다(동기화 때 Dropbox에서 읽음).
+5. Dropbox를 연결했으면 `knou_scope.txt` 양식을 확인하고, 과제 메모를 `notes`로 붙여 `knou_agenda.json`을 내보낸 뒤, 위젯 스크립트 버전을 확인합니다. 과제 메모는 3단계의 일정 설명란에도 들어갑니다(동기화 때 Dropbox에서 읽고, 못 읽거나 연결하지 않았으면 브라우저 저장본).

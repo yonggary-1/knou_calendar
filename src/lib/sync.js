@@ -104,23 +104,13 @@
     return State.set(patch);
   }
 
-  // 캘린더 설명란에 넣을 과제 메모. Dropbox에서 최신을 읽고, 못 읽으면 마지막으로 읽은 것을 쓴다
-  // (못 읽을 때마다 메모를 빼 버리면 설명란이 매번 바뀌므로)
-  async function notesForCalendar(knou) {
-    const cached = (await KS.ext.storage.local.get('ks_notes')).ks_notes;
-    if (!(await KS.dropbox.status()).connected) return cached?.notes || null;
+  // 캘린더 설명란에 넣을 과제 메모 (1.6.2: Dropbox 연결 시 knou_scope.txt, 아니면·못 읽으면 브라우저 저장본 — lib/memo.js)
+  async function notesForCalendar(knou, semester) {
     const courses = (knou.courses || []).map((c) => c.name);
-    let timer;
     try {
-      const fresh = await Promise.race([
-        KS.dropbox.readNotes({ courses }),
-        new Promise((resolve) => { timer = setTimeout(() => resolve(null), 15000); }),
-      ]);
-      return fresh?.notes || cached?.notes || null;
+      return await KS.memo.notesForCalendar(courses, semester);
     } catch {
-      return cached?.notes || null;
-    } finally {
-      clearTimeout(timer);
+      return (await KS.ext.storage.local.get('ks_notes')).ks_notes?.notes || null;
     }
   }
 
@@ -175,7 +165,8 @@
       }
       if (!live()) return State.get();
 
-      const notes = await notesForCalendar(knou);
+      const semester = KS.schedule.build(knou, settings, null).semesters[0] || ''; // 메모의 학기 확인용
+      const notes = await notesForCalendar(knou, semester);
       const built = KS.schedule.build(knou, settings, notes);
       await KS.ext.storage.local.set({ ks_places: built.places });
       await KS.ext.storage.session.set({

@@ -193,6 +193,7 @@ node test\scope_test.js
 - 내보낼 때 앱 폴더의 `/KnouWidget.js`가 없거나 버전이 다를 때만 올립니다. 마지막으로 확인한 rev·버전을 `ks_widget`에 두어, rev가 같으면 내려받지도 않습니다.
 - 위젯을 새 버전으로 바꾸려면 `src/widget/KnouWidget.js`만 교체하고 확장을 릴리즈하면 됩니다.
 - 위젯 v1.1.0부터는 **자동 업데이트**가 됩니다. 앱에서 실행될 때 Dropbox의 `/KnouWidget.js`가 **더 높은 버전**일 때만 자기 파일(`module.filename`)을 바꿉니다. 받은 파일은 첫 줄 버전과 `WIDGET_VERSION`이 같은지, 10KB 이상인지, `Script.complete();`로 끝나는지로 확인합니다. 확장의 `ensureWidget`은 "버전이 다르면" 올리지만, 위젯은 "더 높으면"만 바꾸므로 낮은 버전으로 되돌아가지 않습니다. 새 위젯을 낼 때 첫 줄·`WIDGET_VERSION`과 함께 **파일 끝의 `Script.complete();`를 지우지 마세요.**
+- 위젯 v1.1.2부터 과목을 골라 크게 보는 화면(대형·특대형)은 과제 메모가 칸을 끝까지 채우도록 **글자 크기를 스크립트가 직접 정합니다**(iOS 위젯은 여러 줄 글자를 `minimumScaleFactor`로 줄여 주지 않음). 접히는 줄 수를 한 줄 글자 수(`cpl`)로 어림하고, 칸 높이 `FILL_ROOM`(14pt 본문 줄 단위, 9.0)에 들어갈 때까지 5%씩 줄입니다(최소 50%). 실제 화면과 어긋나면 이 두 기준값만 고치면 됩니다. 특대형 두 과목(`cpl` 24)과 대형(25)은 화면을 재지 않은 어림값입니다.
 - 위젯 v1.1.0은 `knou_agenda.json`의 `notes`를 우선 씁니다. `get_metadata`로 txt의 rev만 확인해서 `notesRev`와 같으면 notes를 쓰고, 다르면 txt를 직접 읽습니다. 그래서 확장은 `notesRev`에 **notes를 만든 바로 그 txt의 rev**를 넣어야 합니다(`readNotes`가 rev와 내용을 함께 읽는 이유).
 
 ## 파이어폭스 배포

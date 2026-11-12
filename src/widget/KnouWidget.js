@@ -1,4 +1,4 @@
-// KnouWidget v1.1.0 — 방통대 과목별 일정 + 과제 내용 (Scriptable)
+// KnouWidget v1.1.2 — 방통대 과목별 일정 + 과제 내용 (Scriptable)
 // 위젯 편집의 Parameter로 화면을 고른다 (스크립트는 이것 하나):
 //   비움 또는 a : 과목 칸 격자. 칸을 누르면 그 과목 상세 화면(스크롤)
 //   b           : 마감이 가까운 순서로 전 과목 요약 (같은 마감은 한 줄로 묶음)
@@ -11,7 +11,7 @@
 //   /KnouWidget.js    : 확장이 올려 두는 이 스크립트. 앱에서 실행할 때 더 높은 버전이면 자기 파일을 교체
 // Dropbox 연결은 이 스크립트가 맡는다. 스크립트 이름은 반드시 KnouWidget.
 
-const WIDGET_VERSION = "1.1.0"; // 첫 줄의 "KnouWidget v1.1.0"과 같게 유지 (확장이 새 버전 여부를 판단할 때 씀)
+const WIDGET_VERSION = "1.1.2"; // 첫 줄의 "KnouWidget v1.1.x"과 같게 유지 (확장이 새 버전 여부를 판단할 때 씀)
 const APP_KEY = "htxa03bfx70wl6i"; // Knou calendar에 내장된 Dropbox 앱 키 (같은 앱 폴더를 쓰려면 같아야 함)
 const AGENDA_PATH = "/knou_agenda.json";
 const SCOPE_PATH = "/knou_scope.json"; // 예전 형식 (txt가 없을 때만)
@@ -398,6 +398,8 @@ function pickCourses(param, courses) {
 }
 
 // ---------------- 위젯 그리기 ----------------
+// 꽉 채우기에서 칸 하나가 담는 높이 (14pt 본문 줄 수 단위). 아이패드 특대형에서 일정 1줄·평가 1개일 때 본문 약 7.2줄
+const FILL_ROOM = 9.0;
 // 홈 화면 착색(틴트)·투명 모드에서는 색이 단색으로 바뀌므로, 배경색 칸 대신 글자 굵기와 테두리로 구분한다
 function txt(stack, s, font, color, lines) {
   const t = stack.addText(String(s));
@@ -441,7 +443,7 @@ function itemLine(stack, it, now, size) {
 function courseCard(parent, v, now, opt) {
   const card = parent.addStack();
   card.layoutVertically();
-  card.setPadding(10, 12, 10, 12);
+  card.setPadding(10, 12, opt.fill ? 6 : 10, 12);
   card.cornerRadius = 12;
   card.borderWidth = 1;
   card.borderColor = C.line;
@@ -462,21 +464,42 @@ function courseCard(parent, v, now, opt) {
 
   // 과제 내용·시험 범위: 칸의 중심. 다음 평가 것이 먼저, 과목 메모는 뒤
   card.addSpacer(4);
-  if (v.scopes.length) {
+  const hasScopes = v.scopes.length > 0;
+  if (hasScopes) {
     let left = opt.scopeLines; // 칸 안에서 쓸 수 있는 줄 수를 항목끼리 나눔
-    for (const s of v.scopes) {
-      if (left <= 0) break;
+    const cpl = Math.max(8, Math.floor((opt.cpl || 24) / SCALE)); // 한 줄에 들어가는 글자 수 (어림)
+    const wrapCount = (body, per) => body.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / per)), 0);
+    if (opt.fill) {
+      // 꽉 채우기: 위젯은 여러 줄 글자를 스스로 줄여 주지 않으므로, 전부 들어가는 글자 크기를 직접 고른다
+      // 칸 높이를 "14pt 본문 줄" 단위로 어림 (아이패드 대형·특대형 위젯 높이 기준, 일정 줄·제목 줄 몫은 뺌)
+      const shownItems = Math.max(1, Math.min(v.items.length, opt.items)) + (v.items.length > opt.items ? 1 : 0);
+      const room = (FILL_ROOM - 0.9 * (shownItems + v.scopes.length)) / SCALE;
+      const bodies = v.scopes.map((s) => String(s.scope).trim());
+      let k = 1;
+      while (k > 0.5 && bodies.reduce((n, b) => n + wrapCount(b, cpl / k), 0) * k > room) k = Math.round((k - 0.05) * 100) / 100;
+      bodies.forEach((body, i) => {
+        txt(card, v.scopes[i].kind || "메모", Font.semiboldSystemFont(fs(12)), C.blue, 1);
+        const t = txt(card, body, Font.systemFont(fs(14 * k)), C.text, wrapCount(body, cpl / k) + 1);
+        t.minimumScaleFactor = 0.8; // 어림이 조금 빗나가도 잘리기 전에 한 번 더 줄임
+      });
+      v.scopes = []; // 아래 일반 경로는 건너뜀
+    }
+    v.scopes.forEach((s, i) => {
+      if (left <= 0 && !opt.fill) return;
       const body = String(s.scope).trim();
-      const want = Math.min(left, Math.max(2, body.split("\n").length + 1));
+      // 줄바꿈 수가 아니라 화면에서 접히는 줄 수로 센다. 마지막 항목은 남은 줄을 모두 쓴다
+      const wrapped = body.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / cpl)), 0);
+      const last = i === v.scopes.length - 1;
+      const want = last ? left : Math.min(left, Math.max(2, wrapped + 1));
       txt(card, s.kind || "메모", Font.semiboldSystemFont(fs(opt.big ? 12 : 11)), C.blue, 1);
       const t = txt(card, body, Font.systemFont(fs(opt.big ? 14 : 13)), C.text, Math.max(1, want - 1));
       t.minimumScaleFactor = 0.85;
       left -= want;
-    }
+    });
   } else {
     txt(card, "과제 내용 없음", Font.systemFont(fs(12)), C.sub);
   }
-  card.addSpacer();
+  if (!opt.fill || !hasScopes) card.addSpacer(); // 꽉 채우기에서 메모가 있으면 아래 빈칸 없이
   return card;
 }
 
@@ -533,8 +556,8 @@ function drawGrid(w, data, now, family) {
   const shown = courses.slice(0, cols * rowsMax);
   const rowCount = Math.ceil(shown.length / cols);
   const opt = family === "extraLarge"
-    ? { items: rowCount > 1 ? 1 : 2, scopeLines: rowCount > 1 ? 5 : 9 } // 일정은 1~2줄, 나머지는 과제 내용
-    : { items: 1, scopeLines: 3 };
+    ? { items: rowCount > 1 ? 1 : 2, scopeLines: rowCount > 1 ? 5 : 9, cpl: 22 } // 일정은 1~2줄, 나머지는 과제 내용
+    : { items: 1, scopeLines: 3, cpl: 18 };
   const grid = w.addStack();
   grid.layoutVertically();
   grid.spacing = 8;
@@ -562,7 +585,9 @@ function drawPicked(w, data, now, family, param) {
   const row = w.addStack();
   row.spacing = 10;
   for (const course of picked.slice(0, n)) {
-    courseCard(row, courseView(data, course, now), now, { big: true, items: family === "medium" ? 1 : 2, scopeLines: family === "medium" ? 3 : 10 });
+    // 줄 수는 넉넉히 준다: 칸보다 길면 위젯이 알아서 칸 높이에서 자르고 "…"를 붙인다
+    const cpl = family === "extraLarge" ? (n === 1 ? 50 : 24) : 25; // 한 줄 글자 수 (11/12 아이패드 화면에서 잼: 특대형 한 과목 약 52자)
+    courseCard(row, courseView(data, course, now), now, { big: true, items: family === "medium" ? 1 : 2, scopeLines: family === "medium" ? 3 : 14, cpl, fill: family !== "medium" });
   }
 }
 

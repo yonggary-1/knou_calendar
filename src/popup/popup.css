@@ -1,4 +1,8 @@
-body { width: 360px; min-height: 200px; }
+/* 팝업 전체는 스크롤하지 않는다 (브라우저 팝업 최대 높이 600px 안에 고정).
+   위(상태·동기화 버튼)와 아래(바로가기)는 늘 보이고, 가운데 남은 일정만 남은 높이를 채우며 스크롤된다 */
+html { overflow: hidden; }
+body { width: 360px; min-height: 200px; max-height: 600px; display: flex; flex-direction: column; overflow: hidden; }
+body > .top, body > .status, body > .links { flex: none; }
 
 .top {
   display: flex; align-items: center; justify-content: space-between;
@@ -22,7 +26,8 @@ body { width: 360px; min-height: 200px; }
 .row .link.dim { color: var(--muted); font-weight: 500; }
 .row[hidden] { display: none; }
 
-.panel { padding: 14px 12px 12px; display: grid; gap: 12px; }
+.panel { padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 12px; flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.panel > * { flex: none; } /* 미리보기·안내가 아주 길 때만 패널 자체가 스크롤 */
 .panel h2 { margin: 0; font-size: 14px; font-weight: 700; }
 .panel p { margin: 0; }
 .actions { display: flex; gap: 8px; }
@@ -55,7 +60,7 @@ body { width: 360px; min-height: 200px; }
 .foot { font-size: 12px; color: var(--muted); }
 
 /* ---- 남은 일정 ---- */
-.agenda { display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow-y: auto; margin: 0 -2px; padding: 0 2px; }
+.panel > .agenda { display: flex; flex-direction: column; gap: 10px; flex: 0 1 auto; min-height: 96px; overflow-y: auto; margin: 0 -2px; padding: 0 2px; }
 .agenda > .course { flex: none; } /* 스크롤 영역에 맞춰 카드가 눌리지 않게 */
 .agenda-head { display: flex; align-items: baseline; justify-content: space-between; }
 .agenda-head h2 { font-size: 13px; }

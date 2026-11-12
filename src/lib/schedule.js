@@ -122,8 +122,26 @@
   const LINK = 'MyKNOU: https://m.knou.ac.kr/';
 
   const isExamType = (t) => /시험|객관식|주관식/.test(t || '') && !/과제/.test(t || '');
+  // 사용자 결정 (1.6.6): 시험형이 아니면서 제출 기간이 딱 하루인 평가(대개 출석수업 맞춤형평가)가 그 과목 출석수업과
+  // **같은 날**이면 따로 일정을 만들지 않고 그 출석수업 일정에 합친다(제목에 평가 이름, 설명란에 평가 시간·평가 메모).
+  // 날짜가 다르면 예전처럼 따로 넣는다. 시험형(중간·기말 시험)은 합치지 않는다
+  const isOneDayTask = (type, p) => !isExamType(type) && !!p && p.range && p.startDate === p.endDate;
+  const shortEval = (type) => (/맞춤형/.test(type || '') ? '맞춤형평가' : type || '평가');
+  // → [{ kind, type, p, session }] session = 합칠 출석수업 회차 번호
+  function mergedEvals(course) {
+    const sessions = (course.attendance?.sessions || []).filter((s) => parseYmd(s.date) && parseHours(s.hours));
+    const out = [];
+    for (const kind of ['mid', 'final']) {
+      const ev = course[kind];
+      const p = ev && parsePeriod(ev.period);
+      if (!isOneDayTask(ev?.type, p)) continue;
+      const i = sessions.findIndex((s) => parseYmd(s.date) === p.startDate);
+      if (i >= 0) out.push({ kind, type: ev.type || '', p, session: i });
+    }
+    return out;
+  }
 
-  function buildClassGroup(course, settings, places) {
+  function buildClassGroup(course, settings, places, merged = []) {
     const a = course.attendance || {};
     const sessions = (a.sessions || []).filter((s) => parseYmd(s.date) && parseHours(s.hours));
     if (!sessions.length) return null;
@@ -135,7 +153,9 @@
       const place = resolvePlace(s.placeRaw, s.campus, settings.placeOverrides);
       if (place.raw || place.campus) places.set(place.raw || place.campus, place);
       const location = online && a.meetingUrl ? a.meetingUrl : place.location;
+      const evals = merged.filter((m) => m.session === i);
       const desc = [
+        ...evals.map((m) => `${m.kind === 'mid' ? '중간' : '기말'}평가: ${m.type || '-'} (${m.p.startTime}~${m.p.endTime})`),
         `과목: ${course.name}`,
         a.type ? `유형: ${a.type}` : null,
         s.placeRaw ? `장소: ${s.placeRaw}` : null,
@@ -150,7 +170,8 @@
         summary:
           `[출석수업] ${course.name}` +
           (sessions.length > 1 ? ` (${i + 1}/${sessions.length})` : '') +
-          (a.type && a.type !== '대면수업' ? ` · ${a.type}` : ''),
+          (a.type && a.type !== '대면수업' ? ` · ${a.type}` : '') +
+          evals.map((m) => ` · ${shortEval(m.type)}`).join(''),
         location: location || undefined,
         description: desc.join('\n'),
         ...timedEvent(date, st, date, et),
@@ -161,7 +182,8 @@
     const f = events[0];
     return {
       kind: 'class',
-      label: `${course.name} · 출석수업`,
+      merged: merged.map((m) => ({ kind: m.kind, session: m.session })), // 이 일정에 합친 평가 (applyNotes가 평가 메모를 넣음)
+      label: `${course.name} · 출석수업${merged.length ? ` + ${merged.map((m) => shortEval(m.type)).join(', ')}` : ''}`,
       when: `${md(f.start.dateTime.slice(0, 10))} ${f.start.dateTime.slice(11, 16)}`,
       events,
     };
@@ -172,6 +194,7 @@
     const p = parsePeriod(ev.period);
     if (!p) return null;
     const type = ev.type || '';
+    if (mergedEvals(course).some((m) => m.kind === kind)) return null; // 같은 날 출석수업 일정에 합침
     const exam = isExamType(type);
     const label = kind === 'mid' ? '중간평가' : exam ? '기말시험' : '기말평가';
     const color = kind === 'mid' ? '5' : '11';
@@ -239,14 +262,15 @@
     const items = [];
     for (const c of knou.courses || []) {
       const a = c.attendance || {};
-      for (const s of a.sessions || []) {
+      const merged = mergedEvals(c);
+      const valid = (a.sessions || []).filter((s) => parseYmd(s.date) && parseHours(s.hours));
+      for (const [i, s] of valid.entries()) {
         const date = parseYmd(s.date), hrs = parseHours(s.hours);
-        if (!date || !hrs) continue;
         const place = resolvePlace(s.placeRaw, s.campus, settings.placeOverrides);
         const room = s.room ? s.room + (/^\d+$/.test(s.room) ? '호' : '') : '';
         items.push({
           course: c.name, kind: 'class', label: '출석수업',
-          detail: a.type && a.type !== '대면수업' ? a.type : '',
+          detail: [a.type && a.type !== '대면수업' ? a.type : '', ...merged.filter((m) => m.session === i).map((m) => shortEval(m.type))].filter(Boolean).join(' · '),
           start: kst(date, hrs[0]), end: kst(date, hrs[1]),
           place: [shortLoc(place.location) || s.placeRaw, room].filter(Boolean).join(' '),
           link: 'attendance', due: false,
@@ -257,6 +281,7 @@
         const p = ev && parsePeriod(ev.period);
         if (!p) continue;
         const type = ev.type || '';
+        if (merged.some((m) => m.kind === kind)) continue; // 출석수업 줄에 합침
         const exam = isExamType(type);
         const label = kind === 'mid' ? '중간평가' : exam ? '기말시험' : '기말평가';
         const link = exam ? 'myknou' : /맞춤형/.test(type) ? 'classAssignment' : 'assignment';
@@ -311,7 +336,14 @@
     const memo = String(n.memo || '').trim();
     const memoPart = memo ? `📌 과목 메모\n${memo}` : '';
     if (g.kind === 'class') {
-      for (const ev of g.events) withNotes(ev, [memoPart]);
+      // 합친 평가(1.6.6)의 평가 메모는 그 회차의 출석수업 일정에
+      g.events.forEach((ev, i) => {
+        const evalParts = (g.merged || []).filter((m) => m.session === i).map((m) => {
+          const body = String(n[m.kind] || '').trim();
+          return body ? `📝 ${m.kind === 'mid' ? '중간평가' : '기말평가'}\n${body}` : '';
+        });
+        withNotes(ev, [...evalParts, memoPart]);
+      });
       return;
     }
     if (g.kind !== 'mid' && g.kind !== 'final') return;
@@ -337,7 +369,7 @@
       const sem = `${c.year || knou.semester?.year || '0000'}-${c.term || knou.semester?.term || '0'}`;
       semesters.add(sem);
       const parts = [
-        buildClassGroup(c, settings, places),
+        buildClassGroup(c, settings, places, mergedEvals(c)),
         buildEvalGroup(c, 'mid', c.mid, settings),
         buildEvalGroup(c, 'final', c.final, settings),
       ];

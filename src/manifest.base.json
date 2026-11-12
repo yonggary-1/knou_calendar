@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Knou calendar",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "description": "방통대(MyKNOU) 출석수업·중간/기말평가 일정을 구글 캘린더 전용 캘린더에 자동으로 넣어줍니다.",
   "icons": {
     "16": "icons/icon16.png",

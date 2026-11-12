@@ -203,5 +203,56 @@ out('   ✓ 목록 형식 확인');
   // 메모가 없으면 1.5.0 일정과 완전히 같음 (업데이트해도 아무 변화 없음)
   assert.strictEqual(KS.schedule.diff(KS.schedule.build(r, settings, null), oldCal).total, 0);
   out('   1.5.0에서 올라와도 교체 없이 설명란만, 메모 없으면 변경 0 ✓');
+
+  // 1.6.6: 설정에서 "과제 메모를 일정 설명란에 넣기"를 끄면 sync가 notes 없이 만든다 → 이미 들어간 메모는 설명란 수정으로 지움
+  dd = KS.schedule.diff(KS.schedule.build(r, settings, null), cal);
+  assert.deepStrictEqual([dd.counts.add, dd.counts.replace, dd.counts.delete], [0, 0, 0]);
+  assert.strictEqual(dd.counts.update, b2.groups.filter((g) => g.course === name).length, '메모가 있던 그룹만');
+  assert.ok(dd.patches.every((p) => !p.body.description.includes('📝') && !p.body.description.includes('📌')));
+  out(`   메모 끔 → 교체 없이 설명란에서 메모만 지움 (그룹 ${dd.counts.update}) ✓`);
+}
+
+// ---- 8. 하루짜리 평가 (1.6.6 결정) ----
+//  시험형이 아니면서 제출 기간이 딱 하루인 평가(대개 출석수업 맞춤형평가)
+//   - 그 과목 출석수업과 같은 날 → 따로 만들지 않고 그 출석수업 일정에 합침 (제목·설명란·평가 메모, 남은 일정도 한 줄)
+//   - 날짜가 다름 → 예전처럼 따로 (하루짜리 마감 일정)
+//   - 시험형은 합치지 않음
+{
+  const oneDay = r.courses.map((c) => ({ c, kind: ['mid', 'final'].find((k) => {
+    const p = c[k] && KS.schedule.parsePeriod(c[k].period);
+    return p && p.range && p.startDate === p.endDate && !/시험|객관식|주관식/.test(c[k].type || '');
+  }) })).filter((x) => x.kind);
+  assert.ok(oneDay.length, '저장 페이지에 하루짜리 평가(출석수업 맞춤형평가)가 있어야 함');
+  const same = [], diff = [];
+  for (const { c, kind } of oneDay) {
+    const day = KS.schedule.parsePeriod(c[kind].period).startDate;
+    const onClassDay = c.attendance.sessions.some((s) => KS.schedule.parseYmd(s.date) === day);
+    const evg = built.groups.find((g) => g.course === c.name && g.kind === kind);
+    const cg = built.groups.find((g) => g.course === c.name && g.kind === 'class');
+    if (onClassDay) {
+      same.push(c.name);
+      assert.ok(!evg, c.name + ' 평가 일정을 따로 만들지 않음');
+      const ce = cg.events.find((e) => e.start.dateTime.slice(0, 10) === day);
+      assert.ok(ce.summary.endsWith(' · 맞춤형평가'), ce.summary);
+      assert.ok(ce.description.startsWith('중간평가: 출석수업 맞춤형평가 (09:00~18:00)'), ce.description.slice(0, 60));
+      const ai = built.agenda.filter((it) => it.course === c.name && it.end.slice(0, 10) === day);
+      assert.strictEqual(ai.length, 1, '남은 일정도 한 줄');
+      assert.ok(ai[0].kind === 'class' && ai[0].detail.includes('맞춤형평가'));
+      // 평가 메모는 합친 출석수업 일정에
+      const bn = KS.schedule.build(r, settings, { [c.name]: { mid: '교재 1~3장', final: '', memo: '' } });
+      const ce2 = bn.groups.find((g) => g.course === c.name && g.kind === 'class').events.find((e) => e.start.dateTime.slice(0, 10) === day);
+      assert.ok(ce2.description.startsWith('📝 중간평가\n교재 1~3장\n\n────────\n중간평가: 출석수업 맞춤형평가'), ce2.description.slice(0, 80));
+    } else {
+      diff.push(c.name);
+      assert.ok(evg && evg.events.length === 1 && evg.events[0].summary.startsWith('[마감]'), c.name + ' 날짜가 달라 따로 (마감 일정)');
+      assert.ok(built.agenda.some((it) => it.course === c.name && it.kind === kind), c.name + ' 남은 일정에 따로');
+    }
+  }
+  // 하루짜리 시험형은 합치지 않음 (가상 과목: 같은 날 출석수업이 있어도)
+  const fake = { ...r, courses: [{ ...r.courses[0], name: '가상중간시험', attendance: { type: '대면수업', sessions: [{ ...r.courses[0].attendance.sessions[0], date: '2026.10.20' }] }, mid: { type: '중간시험(객관식)', period: '2026.10.20 10:00-10.20 11:00' }, final: null }] };
+  const bf = KS.schedule.build(fake, settings);
+  assert.ok(bf.groups.some((g) => g.kind === 'mid' && g.events[0].summary.startsWith('[중간평가]')), '하루짜리 시험은 따로');
+  assert.ok(!bf.groups.find((g) => g.kind === 'class').events[0].summary.includes('·'), '출석수업 제목 그대로');
+  out(`[8] 하루짜리 평가: 같은 날 출석수업에 합침(${same.join(', ') || '없음'}), 날짜가 달라 따로(${diff.join(', ') || '없음'}), 시험형은 따로 ✓`);
 }
 out('설명란 테스트 통과');

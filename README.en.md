@@ -10,7 +10,7 @@ A browser extension that automatically copies **attendance classes, midterm, fin
 
 - **Automatic registration**: reads your course schedules from the MyKNOU dashboard and adds them to a "방통대 학사일정" calendar in Google Calendar.
   - Attendance classes: class time and place. The place is converted to an official name that Google Maps can find, e.g. `한국방송통신대학교 서울남부학습센터`.
-  - Assignment-type assessments: submission period (all-day event), a deadline event, and reminders.
+  - Assignment-type assessments: submission period (all-day event), a deadline event, and reminders. An assessment whose submission period is a single day (usually 출석수업 맞춤형평가) is merged into that course's attendance-class event when they fall on the same day (the title ends with `· 맞춤형평가` and the description shows the assessment time). If the dates differ, it is added separately.
   - Exam-type assessments: exam time. It is added at the next sync once the date is announced.
   - Formative assessment: study period and deadline.
 - **Change tracking**: detects campus changes, schedule changes, and dropped courses, and replaces or removes only the affected course's events. You review a preview before anything is applied.
@@ -105,6 +105,7 @@ Click **📝 과제 메모** at the bottom of the popup to open a full-size edit
   - **Assessment notes** go into that assessment's **submission-period** event (the exam event for exam-type assessments), not the deadline event. If there is no submission-period event (turned off in Settings, or a one-day period), they go into the deadline event instead.
   - **Course memos** go into every event of that course, including attendance classes.
   - When only notes change, only the descriptions are edited; events are not recreated, so reminders don't fire again.
+  - To keep notes out of event descriptions, turn off **과제 메모를 일정 설명란에 넣기** (Put assignment notes in event descriptions) in Settings → 2. 캘린더. The next sync removes only the notes from descriptions; the notes themselves stay in the editor and the widget.
 - You can also edit the same file in the widget or in Notepad. If someone else saved while you were editing, the editor does not overwrite it; **새 내용 불러오고 내 변경 다시 채우기** (Reload and re-apply my changes) keeps both.
 - Format when editing by hand: a course line must match the MyKNOU course name (spaces are ignored). Lines above the first course (the header) are not shown in the widget.
 

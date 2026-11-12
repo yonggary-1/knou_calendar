@@ -173,6 +173,19 @@ node test\scope_test.js
 - **캘린더 설명란** (`memo.notesForCalendar`): 연결됨 → Dropbox(15초 제한), 못 읽거나 연결 안 함 → 브라우저 기록, 그것도 없으면 `ks_notes` 캐시.
 - **txt 내보내기** (편집기): `KS.scope.scopeToTxt`로 화면 내용을 만들어 Chromium은 `showSaveFilePicker`, Firefox는 `downloads.download({ saveAs: true })`(빌드가 Firefox manifest에만 `downloads` 권한을 넣음), 둘 다 없으면 `<a download>`로 저장합니다. 파일 이름 `knou_scope_<학기>.txt`, LF.
 
+### 하루짜리 평가 (1.6.6 결정)
+
+시험형이 아니면서(`isExamType` 거짓) 제출 기간이 **하루**(`range`이고 `startDate === endDate`)인 평가(`isOneDayTask`, 대개 "출석수업 맞춤형평가")를 이렇게 다룹니다.
+
+- **그 과목 출석수업과 같은 날** (`mergedEvals`): 따로 그룹을 만들지 않고 그 회차 출석수업 일정에 합칩니다.
+  - 제목 끝에 ` · 맞춤형평가`(`shortEval`)를 붙입니다.
+  - 설명란 첫 줄에 `중간평가: 출석수업 맞춤형평가 (09:00~18:00)`를 넣습니다.
+  - 평가 메모(📝)는 `applyNotes`가 그 출석수업 일정에 넣습니다(`g.merged`).
+  - 남은 일정도 출석수업 줄 하나로 보입니다(`detail`에 "맞춤형평가").
+- **날짜가 다름**: 예전처럼 따로 넣습니다. 하루짜리라 제출기간 일정 없이 마감 일정 하나만 만듭니다.
+- **시험형**(중간·기말 시험)은 하루짜리여도 합치지 않습니다.
+- 1.6.5 이하에서 만든 맞춤형평가 일정은 다음 동기화 때 "삭제"로, 합쳐진 출석수업은 "교체"로 정리됩니다.
+
 ### 캘린더 설명란 (1.6.0 결정)
 
 `schedule.build(knou, settings, notes)`가 일정 설명란 맨 위에 메모를 넣습니다. 형식은 `📝 기말평가` / `📌 과목 메모` 머리줄 + 내용, 빈 줄, `────────`, 원래 설명입니다.
@@ -184,6 +197,7 @@ node test\scope_test.js
 
 - 설명란이 약 8,000자를 넘으면 메모를 자르고 `… (전체는 위젯·편집기에서)`를 붙입니다.
 - **메모만 바뀐 경우**: 일정마다 `ks_base`(메모를 넣기 전 모양의 해시)를 저장합니다. `ks_base`는 같고 `ks_hash`만 다르면 `diff`가 `update`로 분류해, 일정을 다시 만들지 않고 `PATCH`로 설명란과 해시만 고칩니다(팝업에 "메모" 칩으로 표시). 1.5.0 일정에는 `ks_base`가 없으므로 `ks_hash`를 base로 봅니다. 그래서 업데이트 직후에도 교체가 일어나지 않습니다.
+- **끄기** (1.6.6~): `settings.calendarNotes === false`이면 `sync.preview`가 `notes = null`로 만듭니다. `ks_base`가 같으므로 이미 들어간 메모는 `update`(설명란만 PATCH)로 지워집니다. 기본값은 켬입니다.
 - 동기화 때 메모는 Dropbox에서 새로 읽습니다(15초 제한). 못 읽으면 마지막으로 읽은 `ks_notes`를 씁니다. 못 읽을 때마다 메모를 빼면 설명란이 매번 바뀌기 때문입니다.
 
 ### 위젯 스크립트 배포

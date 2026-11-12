@@ -1,17 +1,12 @@
-## Knou calendar v1.6.5 — Popup cleanup, account settings, past items
+## Knou calendar v1.6.6 — Merged attendance-class assessments, description notes switch
 
 ### What's new
-- **More room in the popup.** The top line shows 방통대 · 구글 · Dropbox (KNOU · Google · Dropbox) in one small row, with a green or red dot for login/connection status. Tighter spacing and lower buttons give the upcoming-task list more height.
-- **Accounts live in Settings.** Connect, switch, and disconnect Google and Dropbox (optional) under **1. 계정** (Accounts) at the top of Settings.
-  - This screen opens after installation.
-  - Pressing sync without Google connected also takes you there.
-  - KNOU login works as before: the extension opens the browser login page and continues automatically after you log in.
-- **Past items.** Click **지난 일정 n건 ▾** (Past n) next to the upcoming list to see finished items, dimmed, in each course card. Choose **최근 2주** (last 2 weeks) or **이번 학기 전부** (whole semester) in Settings → 2. 캘린더.
-- **Result messages show once.** Messages like "applied" or "no changes" disappear the next time you open the popup.
-- **Save button at the top of Settings.** The title bar stays at the top of the page with **저장** (Save) in it. Unsaved changes are flagged, and closing the page with unsaved changes asks for confirmation.
+- **Attendance-class assessments are merged into the attendance-class event.** When an assessment with a one-day submission period (usually 출석수업 맞춤형평가) falls on the same day as that course's attendance class, no separate event is created; the class event's title ends with `· 맞춤형평가` and its description shows the assessment time. The popup's upcoming list shows it as one line too. If the dates differ, it is still added separately. Midterm and final exams are never merged.
+  - In the next sync preview, the old assessment events show up as **delete** and the merged class events as **replace**; applying cleans them up.
+- **Choose whether notes go into event descriptions.** Turn off "과제 메모를 일정 설명란에 넣기" (Put assignment notes in event descriptions, on by default) in Settings → 2. 캘린더. The next sync removes only the notes from descriptions. Events are not recreated, so reminders don't fire again, and the notes stay in the editor and the widget.
 
 ### How to update
-Extract `knou_calendar_chromium.zip` one level above the folder your browser loads, overwrite, and press reload (↻) on the extensions page. Your Google and Dropbox connections and assignment notes are kept. The widget is unchanged (v1.1.2).
+Extract `knou_calendar_chromium.zip` one level above the folder your browser loads, overwrite, and press reload (↻) on the extensions page. The widget is unchanged (v1.1.2).
 
 ### Assets
 - `knou_calendar_chromium.zip`: for Chrome, Edge, Whale, and Opera.

@@ -169,7 +169,8 @@
       if (!live()) return State.get();
 
       const semester = KS.schedule.build(knou, settings, null).semesters[0] || ''; // 메모의 학기 확인용
-      const notes = await notesForCalendar(knou, semester);
+      // 설정에서 끄면 메모 없이 만든다 → 이미 들어간 메모는 diff가 'update'(설명란만 수정)로 지운다
+      const notes = settings.calendarNotes === false ? null : await notesForCalendar(knou, semester);
       const built = KS.schedule.build(knou, settings, notes);
       await KS.ext.storage.local.set({ ks_places: built.places });
       await KS.ext.storage.session.set({

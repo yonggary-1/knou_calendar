@@ -1,7 +1,7 @@
 (async () => {
   const { h, send, ext } = KS;
   const $ = (id) => document.getElementById(id);
-  const CHECKS = ['showPeriod', 'showDeadline', 'showFormative', 'autoApply'];
+  const CHECKS = ['showPeriod', 'showDeadline', 'showFormative', 'calendarNotes', 'autoApply'];
   const TEXTS = ['clientId', 'calendarName', 'classReminders', 'deadlineReminders', 'dropboxAppKey'];
 
   $('ver').textContent = `버전 ${KS.env.version} · ${KS.env.target === 'firefox' ? 'Firefox' : 'Chrome · Edge · 웨일 · 오페라'} 빌드`;

@@ -8,22 +8,46 @@
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
-  <div class="wrap">
-    <header class="head">
-      <img src="../icons/icon48.png" alt="" width="36" height="36">
-      <div>
+  <!-- 제목 줄은 화면 위에 붙어 있고, 저장 버튼도 여기 있다 (페이지 전체가 스크롤) -->
+  <header class="topbar">
+    <div class="inner">
+      <img src="../icons/icon48.png" alt="" width="32" height="32">
+      <div class="title">
         <h1>Knou calendar 설정</h1>
         <p class="muted" id="ver"></p>
       </div>
-    </header>
+      <span id="saved" class="muted small" aria-live="polite"></span>
+      <button id="btnSave" class="primary" disabled>저장</button>
+    </div>
+  </header>
 
-    <section class="card">
-      <h2>1. 구글 계정</h2>
-      <div class="inline">
-        <span class="muted">연결된 계정:</span> <b id="account">없음</b>
-        <button id="btnDisconnect" class="link">연결 해제</button>
+  <div class="wrap">
+
+    <section class="card" id="accounts">
+      <h2>1. 계정 <span class="muted small applied">연결·해제는 바로 적용됩니다</span></h2>
+      <div class="acct" id="acctGoogle">
+        <span class="dot" id="gDot"></span>
+        <span class="name">구글</span>
+        <b class="who" id="account">연결 안 됨</b>
+        <span class="btns">
+          <button id="btnGoogle" class="primary">연결</button>
+          <button id="btnSwitch" hidden>계정 변경</button>
+          <button id="btnDisconnect" class="link" hidden>연결 해제</button>
+        </span>
       </div>
-      <p class="muted small" id="accountHint">확장 아이콘 → 동기화 확인을 누르면 구글 계정 선택 창이 뜹니다.</p>
+      <p class="muted small" id="accountHint">캘린더에 일정을 넣으려면 필요합니다. 이 확장이 만든 전용 캘린더에만 접근하고, 다른 캘린더는 읽거나 바꾸지 않습니다. 권한 화면에서는 <b>캘린더 항목을 꼭 체크</b>해 주세요.</p>
+      <div class="acct" id="acctDropbox">
+        <span class="dot bad" id="dDot"></span>
+        <span class="name">Dropbox <span class="muted small">(선택)</span></span>
+        <b class="who" id="dbxAccount">연결 안 됨</b>
+        <span class="btns">
+          <button id="btnDbxConnect">연결</button>
+          <button id="btnDbxDisconnect" class="link" hidden>연결 해제</button>
+        </span>
+      </div>
+      <p class="muted small" id="dbxLast"></p>
+      <p class="muted small">아이패드 위젯·메모장에서 과제 메모를 보고 고치려면 연결하세요. 연결하지 않아도 캘린더 동기화와 과제 메모는 그대로 됩니다. 확장은 Dropbox의 <code>Apps › KnouWidget</code> 폴더 하나에만 접근합니다. <label class="hide"><input type="checkbox" id="dbxHidden"> 연결하지 않을 때 팝업에서 Dropbox 숨기기</label></p>
+      <p class="muted small">방통대는 따로 연결하지 않습니다. 브라우저에서 MyKNOU에 로그인되어 있으면 그 상태를 그대로 씁니다.</p>
     </section>
 
     <section class="card">
@@ -49,6 +73,13 @@
         </label>
       </div>
       <p class="muted small">1440 = 1일 전, 180 = 3시간 전. 최대 5개.</p>
+      <label class="field">
+        <span>팝업에서 펼칠 지난 일정</span>
+        <select id="pastRange">
+          <option value="2w">최근 2주</option>
+          <option value="all">이번 학기 전부</option>
+        </select>
+      </label>
     </section>
 
     <section class="card">
@@ -60,13 +91,7 @@
     <section class="card">
       <h2>4. Dropbox 내보내기 <span class="muted small">(위젯용, 선택)</span></h2>
       <p class="muted">동기화할 때마다 남은 일정을 Dropbox의 <code>Apps › KnouWidget</code> 폴더에 <code>knou_agenda.json</code>으로 저장합니다. 과제 메모 <code>knou_scope.txt</code>는 파일이 없을 때만 만들고(Dropbox 없이 브라우저에 적어 둔 메모가 있으면 그 내용으로), 이후로는 팝업의 <b>📝 과제 메모</b>·위젯·메모장에서 고친 내용을 그대로 씁니다. 과제 메모는 이 브라우저에도 백업해 두므로 Dropbox 연결이 끊겨도 편집 화면에서 보고 고칠 수 있습니다. 과제 메모는 구글 캘린더 일정 설명란에도 들어갑니다(평가 내용은 제출기간 일정에, 과목 메모는 그 과목 일정 전부에).</p>
-      <p class="muted small">[연결]을 누르면 Dropbox 로그인 창이 열립니다. 확장은 Dropbox의 <code>Apps</code> 폴더 아래 앱 전용 폴더 하나에만 접근할 수 있습니다. 연결하면 팝업에 Dropbox 줄이 나타나고, 동기화 버튼이 내보내기까지 함께 합니다. 팝업에서 [사용 안 함]으로 숨겼어도 여기서 연결하면 다시 나타납니다.</p>
-      <div class="inline gap">
-        <span class="muted">상태:</span> <b id="dbxAccount">연결 안 됨</b>
-        <button id="btnDbxConnect">연결</button>
-        <button id="btnDbxDisconnect" class="link" hidden>연결 해제</button>
-      </div>
-      <p class="muted small" id="dbxLast"></p>
+      <p class="muted small">연결은 위 <b>1. 계정</b>의 Dropbox [연결]에서 합니다. 연결하면 팝업의 동기화 버튼이 내보내기까지 함께 합니다.</p>
       <details class="howto">
         <summary><b>아이패드·아이폰 위젯 설치 (처음 한 번)</b></summary>
         <ol>
@@ -117,10 +142,6 @@
       </div>
     </details>
 
-    <div class="savebar">
-      <span id="saved" class="muted"></span>
-      <button id="btnSave" class="primary">저장</button>
-    </div>
 
     <section class="card">
       <h2>6. 문제 해결</h2>

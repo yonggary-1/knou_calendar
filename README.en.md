@@ -45,14 +45,24 @@ A browser extension that automatically copies **attendance classes, midterm, fin
 
 ## Usage
 
-1. Log in to MyKNOU (m.knou.ac.kr).
-2. Click the extension icon → **동기화 확인** (Check sync).
-3. The first time, a Google account picker and consent screen appear.
+1. Settings opens after installation. In **1. 계정** (Accounts), click **연결** (Connect) for Google. You can do this later; pressing sync without Google connected opens this screen again.
    - On the "Google hasn't verified this app" warning, choose **Continue** (or **Advanced → Go to Knou calendar**).
    - On the permissions screen, **make sure the calendar item is checked**.
-4. Review the preview and click **반영** (Apply).
+2. Log in to MyKNOU (m.knou.ac.kr). If you press sync while logged out, the extension opens the login page and continues automatically after you log in.
+3. Click the extension icon → **동기화 확인** (Check sync), review the preview, and click **반영** (Apply).
 
 After that, just use **동기화 확인 → 반영** whenever your schedule changes.
+
+### Popup
+
+- The dots before **방통대 · 구글 · Dropbox** on the top line show login/connection status: green means OK, red means not (KNOU not checked yet; Dropbox not connected or export failed). Hover for details such as the account. If you don't use Dropbox, you can hide it from the popup in Settings.
+- Result messages (applied, no changes, cancelled, …) are shown once. They disappear the next time you open the popup; the last sync time stays under the sync button.
+- **지난 일정 n건 ▾** (Past n) to the right of **남은 일정** (Upcoming) adds past items, dimmed, to each course card. Choose the range in Settings → 2. 캘린더 → **팝업에서 펼칠 지난 일정**: **최근 2주** (last 2 weeks, default) or **이번 학기 전부** (whole semester).
+
+### Settings
+
+- **1. 계정** (Accounts): Google (connect / switch account / disconnect) and Dropbox (optional). Connecting and disconnecting here apply immediately.
+- Everything else applies when you click **저장** (Save) at the top of the page, or press `Ctrl+S`. Unsaved changes are flagged next to the button, and closing the page with unsaved changes asks for confirmation.
 
 ### About the Google connection
 
@@ -63,10 +73,10 @@ After that, just use **동기화 확인 → 반영** whenever your schedule chan
 
 Use this only if you want the iPad/iPhone widget (KnouWidget) to show schedules together with your assignment notes. Nothing changes if you don't set it up.
 
-1. Click **연결** (Connect) on the **Dropbox** row of the popup. The **연결** button in Settings → **4. Dropbox 내보내기** does the same.
+1. Click **연결** (Connect) for Dropbox (optional) in Settings → **1. 계정** (Accounts).
 2. Click **Allow** in the Dropbox window. The Dropbox app key is built into the extension, so there is nothing to enter.
 
-Once connected, the popup button becomes **동기화 확인 & Dropbox 내보내기** (Check sync & export to Dropbox). That one button syncs the calendar and exports. If an export fails, the dot on the Dropbox row turns red; press the button again to retry. If you don't use Dropbox, click **사용 안 함** (Don't use) to hide it; connecting later from Settings brings it back.
+Once connected, the popup button becomes **동기화 확인 & Dropbox 내보내기** (Check sync & export to Dropbox). That one button syncs the calendar and exports. If an export fails, the Dropbox dot on the popup's top line turns red; press the button again to retry. If you don't use Dropbox, check **연결하지 않을 때 팝업에서 Dropbox 숨기기** (Hide Dropbox in the popup when not connected) in Settings → 1. 계정.
 
 The files live in `Apps › KnouWidget` in your Dropbox (with the Dropbox desktop app on Windows: `%USERPROFILE%\Dropbox\Apps\KnouWidget\`).
 

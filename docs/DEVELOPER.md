@@ -79,8 +79,8 @@ node test\scope_test.js
 
 `lib/dropbox.js`가 담당합니다. 앱 키는 `src/config.json`의 `dropboxAppKey`로 내장하고(`build.js`가 `KS.env.dropboxAppKey`로 넣음), 설정 → 고급의 `settings.dropboxAppKey`가 있으면 그쪽을 씁니다(`KS.effectiveDropboxKey`). PKCE 방식이라 앱 시크릿은 어디에도 넣지 않습니다.
 
-- **화면**: 팝업 연결 상태의 세 번째 줄(`#dbxRow`)이 Dropbox입니다. 연결 안 됨이면 [연결]·[사용 안 함], 연결됨이면 [연결 해제]가 보입니다. 연결됨이면 주 버튼 이름이 `동기화 확인 & Dropbox 내보내기`가 됩니다. 내보내기는 `markDone`에서 자동으로 실행되므로 별도 버튼은 없습니다.
-- **숨김**: [사용 안 함] → `settings.dropboxHidden = true`(`hideDropbox` 메시지). 백그라운드 `status()`의 `dropbox.hidden`은 **연결 안 됨이면서 숨김일 때만** 참입니다. `connectDropbox`가 성공하면 숨김을 풀고 바로 `exportAgenda`를 한 번 부릅니다. 이 처리는 백그라운드에서 하므로 팝업이 닫혀도 끝까지 진행됩니다.
+- **화면** (1.6.5~): 연결·해제는 설정의 **1. 계정**(`#acctDropbox`)에서만 합니다. 팝업 윗줄의 `#stDbx`는 표시만 합니다(녹색 = 연결됨, 빨강 = 연결 안 됨·내보내기 실패). 연결됨이면 주 버튼 이름이 `동기화 확인 & Dropbox 내보내기`가 됩니다. 내보내기는 `markDone`에서 자동으로 실행되므로 별도 버튼은 없습니다.
+- **숨김**: 설정의 "연결하지 않을 때 팝업에서 Dropbox 숨기기" 체크 → `settings.dropboxHidden`(바로 저장). 백그라운드 `status()`의 `dropbox.hidden`은 **연결 안 됨이면서 숨김일 때만** 참입니다. `connectDropbox`가 성공하면 숨김을 풀고 바로 `exportAgenda`를 한 번 부릅니다. 이 처리는 백그라운드에서 하므로 팝업이 닫혀도 끝까지 진행됩니다.
 
 ### 내장 Dropbox 앱 (htxa03bfx70wl6i)
 
@@ -213,4 +213,14 @@ node test\scope_test.js
    - 교체는 새 일정을 먼저 넣고 옛 일정을 지우는 순서로 합니다.
    - 지난 학기 일정은 건드리지 않습니다.
 4. 미리보기에서 사용자가 확인하면 반영하고, 팝업의 "남은 일정"을 갱신합니다.
+
+### 팝업과 설정 화면 (1.6.5~)
+
+- **팝업 레이아웃**: `body`는 최대 600px 세로 flex. 머리줄·상태 줄·바로가기는 고정, 가운데 `.agenda`만 남은 높이를 채우며 스크롤합니다(이중 스크롤 금지). 다시 그릴 때 `.agenda`의 스크롤 위치를 유지합니다.
+- **상태 줄** (`.status .ind`): 표시만 합니다(클릭 없음). 점은 녹색/빨강 두 가지뿐입니다. 방통대 = `state.knou.status === 'ok'`, 구글 = `ks_account` 있음 그리고 `phase !== 'need_google'`, Dropbox = 연결됨 그리고 마지막 내보내기 실패 아님. 자세한 내용은 `title`.
+- **구글 연결**: 설정의 **1. 계정**에서만 합니다. `connectGoogle` 메시지는 토큰만 받고(`forceInteractive`), 동기화가 `need_google`에서 멈춰 있었으면 `preview({ interactive: false, trigger: 'resume' })`로 이어 갑니다. 팝업의 동기화 버튼은 `ks_account`가 없으면 동기화 대신 `openOptions('google')`을 부릅니다. 방통대 로그인은 예전처럼 동기화 흐름(`need_knou_login` → 로그인 탭 → 자동 재시도)이 맡습니다.
+- **설정 열기** (`openOptions(focus)`): `runtime.openOptionsPage()`로 열고(이미 열려 있으면 그 탭), `storage.session`의 `ks_options_focus`로 보여 줄 칸(`google`/`dropbox`/`accounts`)을 알립니다. 처음 설치하면 `accounts`.
+- **결과 문구는 한 번만**: `State.set`은 `phase`나 `message`가 바뀌면 `seen: false`, `msgAt`을 새로 붙입니다. 팝업은 `!seen`이거나 자기가 이미 보여 준 `msgAt`일 때만 문구를 그리고, 처음 그릴 때 `ackMessage(msgAt)`로 `seen: true`를 남깁니다. 경고 단계(`need_*`, `error`, `preview`, `confirm_empty`)는 이 규칙과 상관없이 그대로 보입니다.
+- **지난 일정**: `ks_agenda.items`에는 학기의 지난 일정도 남아 있습니다. 팝업의 [지난 일정 n건 ▾]는 `settings.pastRange`(`'2w'` 기본, `'all'`) 안에서 끝난 일정을 과목 카드 안에 흐리게(`.todo.past`, 최근 것부터) 덧붙입니다. 펼침 상태는 팝업을 닫으면 사라집니다.
+- **설정 저장**: 제목 줄(`.topbar`)은 `position: sticky`이고 [저장]이 그 안에 있습니다. `formValues()`를 처음 값과 비교해 바뀐 것이 있을 때만 [저장]을 켜고 "저장하지 않은 변경 있음"을 표시하며, 닫기 전에 `beforeunload`로 묻습니다. 계정 칸(`#accounts`)은 바로 적용이라 비교에서 뺍니다. Dropbox [연결]이 고급의 앱 키를 먼저 저장하므로 그 칸은 기준값도 맞춥니다.
 5. Dropbox를 연결했으면 `knou_scope.txt` 양식을 확인하고, 과제 메모를 `notes`로 붙여 `knou_agenda.json`을 내보낸 뒤, 위젯 스크립트 버전을 확인합니다. 과제 메모는 3단계의 일정 설명란에도 들어갑니다(동기화 때 Dropbox에서 읽고, 못 읽거나 연결하지 않았으면 브라우저 저장본).

@@ -102,7 +102,7 @@
     if (granted.length && !granted.includes(need) && !granted.includes(SCOPE_FULL)) {
       KS.log('warn', '캘린더 권한 없이 승인됨', { granted: granted.map((x) => x.replace('https://www.googleapis.com/auth/', '')) });
       await KS.ext.storage.local.set({ ks_reconsent: true });
-      throw new KS.KsError('NEED_GOOGLE', '캘린더 권한이 허용되지 않았습니다. [구글 연결]을 누르고, 권한 화면에서 캘린더 항목을 체크한 뒤 계속을 눌러 주세요.');
+      throw new KS.KsError('NEED_GOOGLE', '캘린더 권한이 허용되지 않았습니다. 설정에서 구글 [다시 연결]을 누르고, 권한 화면에서 캘린더 항목을 체크한 뒤 계속을 눌러 주세요.');
     }
     await KS.ext.storage.local.remove('ks_reconsent');
 

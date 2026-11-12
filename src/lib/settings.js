@@ -13,6 +13,7 @@
     deadlineReminders: '1440,180', // 마감 알림(분 전)
     autoApply: false, // 미리보기 없이 바로 반영
     placeOverrides: {}, // 장소 원문 → 정식 명칭
+    pastRange: '2w', // 팝업에서 [지난 일정]을 펼칠 때 보여 줄 범위: '2w' 최근 2주 / 'all' 전부
     dropboxHidden: false, // 팝업의 Dropbox 줄을 [사용 안 함]으로 숨김 (연결하면 다시 보임)
     dropboxAppKey: '', // 직접 만든 Dropbox 앱을 쓸 때만. 비워두면 내장 앱 키 사용
   };

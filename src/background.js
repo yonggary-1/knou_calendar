@@ -19,6 +19,7 @@
       agenda: last.ks_agenda || null,
       hasPermission: perm,
       hasClientId: !!KS.effectiveClientId(settings),
+      pastRange: settings.pastRange === 'all' ? 'all' : '2w',
       // 연결되어 있으면 숨김 설정과 관계없이 항상 보인다
       dropbox: { ...dropbox, hidden: !dropbox.connected && !!settings.dropboxHidden, hasKey: !!KS.effectiveDropboxKey(settings) },
       target: KS.env.target,
@@ -30,14 +31,29 @@
     status,
     preview: () => KS.sync.preview({ interactive: true, trigger: 'user' }),
     apply: () => KS.sync.apply(),
+    ackMessage: (msg) => KS.sync.ackMessage(msg.msgAt),
     confirmEmpty: () => KS.sync.apply({ allowEmpty: true }),
     cancel: () => KS.sync.cancel(),
     openKnou: () => KS.sync.openKnouLogin(),
-    connectGoogle: () => KS.sync.preview({ interactive: true, trigger: 'connect', forceInteractive: true }),
+    // 1.6.5: 구글 연결은 설정 화면에서만. 연결만 하고, 동기화가 구글 연결을 기다리던 중이었으면 이어서 진행한다
+    connectGoogle: () =>
+      wrap(async () => {
+        await KS.gauth.getToken({ interactive: true, forceInteractive: true });
+        const account = await KS.gauth.getAccount();
+        const st = await KS.sync.getStatus();
+        let resumed = false;
+        if (st.phase === 'need_google') {
+          resumed = true;
+          KS.sync.preview({ interactive: false, trigger: 'resume' }).catch((e) => KS.log('error', '구글 연결 후 이어서 동기화 실패', String(e?.message || e)));
+        }
+        KS.log('info', '설정에서 구글 연결', { resumed });
+        return { email: account?.email || '', resumed };
+      }),
     switchAccount: () => KS.sync.switchAccount(),
     disconnect: () => KS.sync.disconnect(),
     resetCalendar: () => KS.sync.resetCalendar(),
-    openOptions: () => ext.runtime.openOptionsPage(),
+    // focus: 'google' | 'dropbox' — 설정의 그 계정 칸을 보여 준다
+    openOptions: (msg) => openOptions(msg?.focus),
     // Dropbox: 화면에 이유를 보여줄 수 있게 오류도 결과로 돌려준다
     dropboxStatus: () => KS.dropbox.status(),
     // 연결은 팝업·설정 어디서 눌러도 여기서 끝까지 진행된다 (인증 창이 뜨며 팝업이 닫혀도 계속됨)
@@ -71,6 +87,13 @@
     exportDropbox: () => wrap(() => KS.dropbox.exportAgenda({ quiet: false })),
   };
 
+  // 설정 화면을 열고(이미 열려 있으면 그 탭으로) 보여 줄 칸을 알려 준다. 설정 화면은 ks_options_focus를 보고 그 칸으로 간다
+  async function openOptions(focus) {
+    if (focus) await ext.storage.session.set({ ks_options_focus: { focus, at: Date.now() } });
+    await ext.runtime.openOptionsPage();
+    return { ok: true };
+  }
+
   async function wrap(fn) {
     try {
       return { ok: true, ...((await fn()) || {}) };
@@ -100,6 +123,6 @@
 
   ext.runtime.onInstalled.addListener((d) => {
     KS.log('info', '설치/업데이트', { reason: d.reason, version: KS.env.version, target: KS.env.target });
-    if (d.reason === 'install') ext.runtime.openOptionsPage();
+    if (d.reason === 'install') openOptions('accounts'); // 처음 설치: 계정 연결부터
   });
 })();

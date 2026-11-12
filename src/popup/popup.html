@@ -18,25 +18,9 @@
   </header>
 
   <section class="status" aria-label="연결 상태">
-    <div class="row">
-      <span class="dot" id="knouDot"></span>
-      <span class="label">방통대</span>
-      <span class="value" id="knouText">확인 전</span>
-      <button id="btnKnou" class="link" hidden>열기</button>
-    </div>
-    <div class="row">
-      <span class="dot" id="googleDot"></span>
-      <span class="label">구글</span>
-      <span class="value" id="googleText">연결 안 됨</span>
-      <button id="btnGoogle" class="link">연결</button>
-    </div>
-    <div class="row" id="dbxRow" hidden>
-      <span class="dot" id="dbxDot"></span>
-      <span class="label">Dropbox</span>
-      <span class="value" id="dbxText"></span>
-      <button id="btnDbx" class="link">연결</button>
-      <button id="btnDbxHide" class="link dim" hidden>사용 안 함</button>
-    </div>
+    <span class="ind" id="stKnou"><span class="dot" id="knouDot"></span>방통대</span>
+    <span class="ind" id="stGoogle"><span class="dot" id="googleDot"></span>구글</span>
+    <span class="ind" id="stDbx"><span class="dot" id="dbxDot"></span>Dropbox</span>
   </section>
 
   <main id="panel" class="panel" aria-live="polite"></main>

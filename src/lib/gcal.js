@@ -35,7 +35,7 @@
         KS.log('warn', '캘린더 권한 부족', { method, status: res.status, reason });
         await KS.ext.storage.session.remove('ks_token');
         await KS.ext.storage.local.set({ ks_reconsent: true });
-        throw new KS.KsError('NEED_GOOGLE', '구글 캘린더 권한이 부족합니다. [구글 연결]을 누르고, 권한 화면에서 캘린더 항목을 체크한 뒤 계속을 눌러 주세요.');
+        throw new KS.KsError('NEED_GOOGLE', '구글 캘린더 권한이 부족합니다. 설정에서 구글 [다시 연결]을 누르고, 권한 화면에서 캘린더 항목을 체크한 뒤 계속을 눌러 주세요.');
       }
       const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && /rateLimit|quota/i.test(reason));
       if (retryable && attempt < 5) {

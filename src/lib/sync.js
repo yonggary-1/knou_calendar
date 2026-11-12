@@ -10,7 +10,10 @@
       return (await KS.ext.storage.session.get('ks_state')).ks_state || { phase: 'idle' };
     },
     async set(patch) {
-      const s = { ...(await State.get()), ...patch, updatedAt: Date.now() };
+      const now = Date.now();
+      // 결과 문구(완료·취소 등)는 한 번만 보여 준다: 단계나 문구가 바뀌면 새 문구(msgAt)로 보고 '아직 안 봄'으로 되돌린다
+      const fresh = ('phase' in patch || 'message' in patch) && !('seen' in patch);
+      const s = { ...(await State.get()), ...patch, ...(fresh ? { seen: false, msgAt: now } : {}), updatedAt: now };
       await KS.ext.storage.session.set({ ks_state: s });
       await badge(s);
       return s;
@@ -306,5 +309,12 @@
     }
   }
 
-  KS.sync = { getStatus, preview, apply, cancel, openKnouLogin, onKnouPageLoaded, switchAccount, disconnect, resetCalendar, State };
+  // 팝업이 결과 문구를 보여 줬음 (msgAt이 같을 때만 — 그사이 새 문구가 생겼으면 그대로 둔다)
+  async function ackMessage(msgAt) {
+    const s = await State.get();
+    if ((s.msgAt || null) === (msgAt || null) && !s.seen) return State.set({ seen: true });
+    return s;
+  }
+
+  KS.sync = { ackMessage, getStatus, preview, apply, cancel, openKnouLogin, onKnouPageLoaded, switchAccount, disconnect, resetCalendar, State };
 })();

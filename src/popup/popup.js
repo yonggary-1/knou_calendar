@@ -54,36 +54,50 @@
 
   const KIND = { class: '출석', mid: '중간', final: '기말', formative: '형성' };
 
-  function agendaView(agenda) {
-    const head = (sub) => h('div', { class: 'agenda-head' }, h('h2', null, '남은 일정'), sub ? h('span', { class: 'foot' }, sub) : null);
+  let shownMsg = null; // 이 팝업에서 보여 준 결과 문구 (State.msgAt)
+  let showPast = false; // [지난 일정 n건] 펼침. 팝업을 닫으면 다시 접힘
+  const PAST_RANGE = { '2w': 14 * 86400e3, all: Infinity };
+
+  function todoRow(it, now, past) {
+    const dd = past ? { text: '지남', cls: 'past' } : ddayOf(it, now);
+    const [url, title] = LINKS[it.link] || LINKS.myknou;
+    const what = it.kind === 'formative' ? `${it.detail} 학습` : it.label + (it.detail ? ` · ${it.detail}` : '');
+    const when = whenOf(it);
+    return h('div', { class: 'todo' + (past ? ' past' : '') },
+      h('span', { class: 'kind ' + it.kind }, KIND[it.kind] || ''),
+      h('div', { class: 'main' }, h('div', { class: 'what', title: what }, what), h('div', { class: 'when', title: when }, when)),
+      h('div', { class: 'side' },
+        h('span', { class: 'dday ' + dd.cls }, dd.text),
+        h('button', { class: 'go', title: title + ' 열기', 'aria-label': title + ' 열기', onclick: () => openTab(url) }, '↗')));
+  }
+
+  // 남은 일정: 과목별 카드. [지난 일정 n건 ▾]을 누르면 각 과목 카드 안에 지난 일정을 흐리게 덧붙인다 (최근 끝난 것부터)
+  function agendaView(agenda, pastRange) {
+    const head = (btn) => h('div', { class: 'agenda-head' }, h('h2', null, '남은 일정'), btn || null);
     if (!agenda?.items) return [head(), h('p', { class: 'muted' }, '동기화를 한 번 하면 남은 할 일이 과목별로 여기에 표시됩니다.')];
     const now = Date.now();
     const upcoming = agenda.items.filter((it) => Date.parse(it.end) > now);
-    const past = agenda.items.length - upcoming.length;
-    if (!upcoming.length) return [head(), h('p', { class: 'muted' }, '남은 일정이 없습니다.')];
+    const since = now - (PAST_RANGE[pastRange] || PAST_RANGE['2w']);
+    const past = agenda.items.filter((it) => { const e = Date.parse(it.end); return e <= now && e > since; })
+      .sort((x, y) => Date.parse(y.end) - Date.parse(x.end));
+    const open = showPast && past.length > 0;
+    const btn = past.length
+      ? h('button', { class: 'pastbtn', 'aria-expanded': String(open), title: pastRange === 'all' ? '이번 학기 지난 일정' : '최근 2주 동안 끝난 일정 (설정에서 바꿀 수 있음)',
+        onclick: () => { showPast = !showPast; lastKey = ''; refresh(); } }, `지난 일정 ${past.length}건 ${open ? '▴' : '▾'}`)
+      : null;
+    if (!upcoming.length && !open) return [head(btn), h('p', { class: 'muted' }, '남은 일정이 없습니다.')];
 
     const byCourse = new Map();
-    for (const it of upcoming) {
-      if (!byCourse.has(it.course)) byCourse.set(it.course, []);
-      byCourse.get(it.course).push(it);
-    }
-    const cards = [...byCourse].map(([course, list]) =>
+    const slot = (c) => { if (!byCourse.has(c)) byCourse.set(c, { up: [], past: [] }); return byCourse.get(c); };
+    for (const it of upcoming) slot(it.course).up.push(it);
+    if (open) for (const it of past) slot(it.course).past.push(it); // 지난 일정만 있는 과목은 뒤에 붙는다
+    const cards = [...byCourse].map(([course, g]) =>
       h('section', { class: 'course' },
-        h('div', { class: 'name' }, h('span', null, course), h('span', { class: 'next' }, `${list.length}건`)),
-        list.map((it) => {
-          const dd = ddayOf(it, now);
-          const [url, title] = LINKS[it.link] || LINKS.myknou;
-          const what = it.kind === 'formative' ? `${it.detail} 학습` : it.label + (it.detail ? ` · ${it.detail}` : '');
-          const when = whenOf(it);
-          return h('div', { class: 'todo' },
-            h('span', { class: 'kind ' + it.kind }, KIND[it.kind] || ''),
-            h('div', { class: 'main' }, h('div', { class: 'what', title: what }, what), h('div', { class: 'when', title: when }, when)),
-            h('div', { class: 'side' },
-              h('span', { class: 'dday ' + dd.cls }, dd.text),
-              h('button', { class: 'go', title: title + ' 열기', 'aria-label': title + ' 열기', onclick: () => openTab(url) }, '↗')));
-        })));
-    const sub = `${byCourse.size}과목 · ${fmtTime(agenda.savedAt)} 반영 기준`;
-    return [head(sub), h('div', { class: 'agenda' }, cards), past ? h('p', { class: 'foot' }, `지난 일정 ${past}건은 숨겼습니다.`) : null];
+        h('div', { class: 'name' }, h('span', null, course),
+          h('span', { class: 'next' }, [g.up.length ? `${g.up.length}건` : '', g.past.length ? `지난 ${g.past.length}` : ''].filter(Boolean).join(' · '))),
+        g.up.map((it) => todoRow(it, now, false)),
+        g.past.map((it) => todoRow(it, now, true))));
+    return [head(btn), h('div', { class: 'agenda' }, cards)];
   }
 
   const act = (type) => async () => {
@@ -92,66 +106,32 @@
     refresh();
   };
 
+  const openOptions = (focus) => { send('openOptions', { focus }); window.close(); };
+
+  // 맨 윗줄: 방통대 구글 Dropbox — 표시만 한다(누를 수 없음). 녹색 = 로그인·연결됨, 빨강 = 그 밖 (확인 전·연결 안 함·실패)
+  // 로그인·연결은 동기화 버튼(방통대 → 브라우저 로그인 화면, 구글 → 설정)과 설정 화면에서 한다
   function setStatus(st) {
     const s = st.state || {};
-    const knou = s.knou?.status;
-    $('knouDot').className = 'dot ' + (knou === 'ok' ? 'ok' : knou === 'logged_out' ? 'bad' : '');
-    $('knouText').textContent =
-      knou === 'ok' ? `로그인됨${s.knou.courses !== undefined ? ` · ${s.knou.courses}과목` : ''}` : knou === 'logged_out' ? '로그인 필요' : '확인 전';
-    $('btnKnou').hidden = knou === 'ok';
-    $('btnKnou').onclick = act('openKnou');
+    const knouOk = s.knou?.status === 'ok';
+    $('knouDot').className = 'dot ' + (knouOk ? 'ok' : 'bad');
+    $('stKnou').title = knouOk ? `방통대: 로그인됨${s.knou.courses !== undefined ? ` · ${s.knou.courses}과목` : ''}` : s.knou?.status === 'logged_out' ? '방통대: 로그인 필요' : '방통대: 동기화할 때 확인합니다';
 
     const email = st.account?.email;
-    $('googleDot').className = 'dot ' + (email ? 'ok' : s.phase === 'need_google' ? 'bad' : '');
-    $('googleText').textContent = email || '연결 안 됨';
-    $('btnGoogle').textContent = email ? '계정 변경' : '연결';
-    $('btnGoogle').onclick = email ? act('switchAccount') : act('connectGoogle');
+    const gOk = !!email && s.phase !== 'need_google';
+    $('googleDot').className = 'dot ' + (gOk ? 'ok' : 'bad');
+    $('stGoogle').title = gOk ? `구글: ${email}` : '구글: 연결 필요';
 
     // ---- Dropbox (선택) ----
     const d = st.dropbox || {};
-    $('btnScope').hidden = false; // 1.6.2: Dropbox 없이도 씀 (연결 안 함 → 이 브라우저에 저장)
     $('btnScope').onclick = () => { send('openScopeEditor'); window.close(); };
-    $('dbxRow').hidden = !!d.hidden || (!d.connected && !d.hasKey);
-    if (d.connected) {
-      const failed = d.last && d.last.ok === false;
-      $('dbxDot').className = 'dot ' + (failed ? 'bad' : 'ok');
-      $('dbxText').className = 'value';
-      $('dbxText').textContent = failed
-        ? '내보내기 실패 (마우스를 올리면 이유)'
-        : [d.email || '연결됨', d.last?.at ? fmtClock(d.last.at) : ''].filter(Boolean).join(' · ');
-      $('dbxText').title = failed ? d.last.message || '' : '';
-      $('btnDbx').textContent = '연결 해제';
-      $('btnDbx').className = 'link dim';
-      $('btnDbx').onclick = async () => {
-        if (!confirm('Dropbox 연결을 해제할까요? Dropbox에 있는 파일은 그대로 남습니다.')) return;
-        await act('disconnectDropbox')();
-      };
-      $('btnDbxHide').hidden = true;
-    } else {
-      $('dbxDot').className = 'dot off';
-      $('dbxText').className = 'value muted';
-      $('dbxText').textContent = dbxNote || '선택 사항 · 위젯용';
-      $('dbxText').title = '';
-      $('btnDbx').textContent = '연결';
-      $('btnDbx').className = 'link';
-      $('btnDbx').onclick = async () => {
-        dbxNote = 'Dropbox 창에서 허용을 눌러 주세요…';
-        lastKey = '';
-        refresh();
-        dbxError = '';
-        const r = await send('connectDropbox'); // 인증 창이 뜨며 팝업이 닫혀도 백그라운드에서 끝까지 진행됨
-        dbxNote = '';
-        if (r && r.ok === false) dbxError = r.message; // 긴 안내는 아래 본문에 표시
-        lastKey = '';
-        refresh();
-      };
-      $('btnDbxHide').hidden = false;
-      $('btnDbxHide').onclick = act('hideDropbox');
-    }
+    $('stDbx').hidden = !!d.hidden || (!d.connected && !d.hasKey);
+    const dOk = d.connected && !(d.last && d.last.ok === false);
+    $('dbxDot').className = 'dot ' + (dOk ? 'ok' : 'bad');
+    $('stDbx').title = !d.connected ? 'Dropbox: 연결 안 함 (선택)'
+      : !dOk ? `Dropbox: 내보내기 실패 — ${d.last.message || ''}`
+      : `Dropbox: ${d.email || '연결됨'}${d.last?.at ? ` · 마지막 내보내기 ${fmtClock(d.last.at)}` : ''}`;
   }
 
-  let dbxNote = '';
-  let dbxError = '';
   const fmtClock = (ms) => {
     const t = new Date(ms), p = (n) => String(n).padStart(2, '0');
     const today = new Date().toDateString() === t.toDateString();
@@ -183,9 +163,8 @@
 
   function render(st) {
     const nodes = renderPhase(st);
-    if (dbxError) nodes.unshift(notice('bad', 'Dropbox 연결이 완료되지 않았습니다', dbxError));
     const phase = st.state?.phase || 'idle';
-    if (st.hasPermission && (WITH_AGENDA.has(phase) || !phase)) nodes.push(...agendaView(st.agenda));
+    if (st.hasPermission && (WITH_AGENDA.has(phase) || !phase)) nodes.push(...agendaView(st.agenda, st.pastRange));
     return nodes;
   }
 
@@ -248,7 +227,7 @@
         break;
       case 'need_google':
         nodes.push(notice('warn', '구글 연결이 필요합니다', s.message));
-        nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: act('connectGoogle') }, '구글 연결')));
+        nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: () => openOptions('google') }, '설정에서 구글 연결')));
         break;
       case 'need_config':
         nodes.push(notice('warn', '구글 클라이언트 ID가 없습니다', '이 빌드에는 내장된 ID가 없습니다. 설정 > 고급에서 입력하세요.'));
@@ -262,9 +241,14 @@
         nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: act('preview') }, '다시 시도')));
         break;
       default: {
-        if (s.phase === 'done' && s.message) nodes.push(notice('', s.message));
-        else if (s.message) nodes.push(h('p', { class: 'muted' }, s.message));
-        nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: act('preview') }, st.dropbox?.connected ? '동기화 확인 & Dropbox 내보내기' : '동기화 확인')));
+        // 결과 문구는 한 번만: 아직 안 본 문구이거나, 이 팝업이 처음 보여 준 문구일 때만 (다음에 팝업을 열면 사라짐)
+        if (s.message && (!s.seen || shownMsg === s.msgAt)) {
+          if (shownMsg !== s.msgAt) { shownMsg = s.msgAt; send('ackMessage', { msgAt: s.msgAt }); }
+          nodes.push(s.phase === 'done' ? notice('', s.message) : h('p', { class: 'muted' }, s.message));
+        }
+        // 구글을 연결한 적이 없으면 동기화 대신 설정의 구글 칸을 연다 (방통대 로그인은 동기화가 알아서 챙김)
+        const sync = st.account?.email ? act('preview') : () => openOptions('google');
+        nodes.push(h('div', { class: 'actions' }, h('button', { class: 'primary', onclick: sync }, st.dropbox?.connected ? '동기화 확인 & Dropbox 내보내기' : '동기화 확인')));
         nodes.push(h('p', { class: 'foot' }, st.lastSync ? `마지막 동기화 ${fmtTime(st.lastSync)}` : '아직 동기화한 적이 없습니다.'));
       }
     }
@@ -277,11 +261,14 @@
       panel.replaceChildren(notice('bad', '확장 백그라운드에 연결할 수 없습니다', '확장을 다시 불러와 주세요.'));
       return;
     }
-    const key = JSON.stringify([st.state, st.account, st.hasPermission, st.lastSync, st.agenda?.savedAt, st.dropbox, dbxNote, dbxError, Math.floor(Date.now() / 60000)]);
+    const key = JSON.stringify([st.state, st.account, st.hasPermission, st.lastSync, st.agenda?.savedAt, st.dropbox, Math.floor(Date.now() / 60000)]);
     if (key === lastKey) return;
     lastKey = key;
     setStatus(st);
+    const keep = panel.querySelector('.agenda')?.scrollTop || 0; // 다시 그려도 목록 스크롤 위치 유지
     panel.replaceChildren(...render(st));
+    const ag = panel.querySelector('.agenda');
+    if (ag && keep) ag.scrollTop = keep;
   }
 
   refresh();

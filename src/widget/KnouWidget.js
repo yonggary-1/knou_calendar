@@ -1,9 +1,10 @@
-// KnouWidget v1.1.2 — 방통대 과목별 일정 + 과제 내용 (Scriptable)
+// KnouWidget v1.2.0 — 방통대 과목별 일정 + 과제 내용 (Scriptable)
 // 위젯 편집의 Parameter로 화면을 고른다 (스크립트는 이것 하나):
-//   비움 또는 a : 과목 칸 격자. 칸을 누르면 그 과목 상세 화면(스크롤)
-//   b           : 마감이 가까운 순서로 전 과목 요약 (같은 마감은 한 줄로 묶음)
+//   비움        : 과목 칸 격자. 칸을 누르면 그 과목 상세 화면(스크롤)
+//   0           : 마감이 가까운 순서로 전 과목 요약 (같은 마감은 한 줄로 묶음)
 //   1,2 / 과목명 : 고른 과목을 크게 (특대형은 두 과목, 그 밖은 첫 과목). 여러 개를 스택으로 겹쳐 넘겨 본다
-//   뒤에 크기 낱말: "a 크게", "b 작게", "1,2 아주 크게"
+//   뒤에 크기 낱말: "크게", "0 작게", "1,2 아주 크게"
+//   (v1.1.8까지의 a·b는 없앴다: a → 비움, b → 0)
 // Knou calendar 확장이 Dropbox 앱 폴더(Apps\KnouWidget)에 저장한 두 파일을 읽는다.
 //   /knou_agenda.json : 남은 일정 (확장이 동기화할 때마다 덮어씀)
 //   /knou_scope.txt   : 과제 내용·시험 범위 원본 (이 스크립트·확장·메모장·Dropbox 앱으로 편집. 없으면 /knou_scope.json)
@@ -11,7 +12,7 @@
 //   /KnouWidget.js    : 확장이 올려 두는 이 스크립트. 앱에서 실행할 때 더 높은 버전이면 자기 파일을 교체
 // Dropbox 연결은 이 스크립트가 맡는다. 스크립트 이름은 반드시 KnouWidget.
 
-const WIDGET_VERSION = "1.1.2"; // 첫 줄의 "KnouWidget v1.1.x"과 같게 유지 (확장이 새 버전 여부를 판단할 때 씀)
+const WIDGET_VERSION = "1.2.0"; // 첫 줄의 "KnouWidget v1.1.x"과 같게 유지 (확장이 새 버전 여부를 판단할 때 씀)
 const APP_KEY = "htxa03bfx70wl6i"; // Knou calendar에 내장된 Dropbox 앱 키 (같은 앱 폴더를 쓰려면 같아야 함)
 const AGENDA_PATH = "/knou_agenda.json";
 const SCOPE_PATH = "/knou_scope.json"; // 예전 형식 (txt가 없을 때만)
@@ -330,8 +331,8 @@ async function chooseFontSize() {
 // Parameter의 과목 부분 → 화면 종류
 function viewOf(courseText) {
   const t = String(courseText || "").trim();
-  if (!t || /^a$/i.test(t)) return "grid";
-  if (/^b$/i.test(t)) return "summary";
+  if (!t) return "grid";
+  if (t === "0") return "summary";
   return "picked";
 }
 
@@ -398,8 +399,27 @@ function pickCourses(param, courses) {
 }
 
 // ---------------- 위젯 그리기 ----------------
-// 꽉 채우기에서 칸 하나가 담는 높이 (14pt 본문 줄 수 단위). 아이패드 특대형에서 일정 1줄·평가 1개일 때 본문 약 7.2줄
-const FILL_ROOM = 9.0;
+
+// 한 줄(줄바꿈 없는 문단)이 화면에서 몇 줄로 접히는지 어림. 너비는 em(한글 한 글자 = 1), 띄어쓰기 단위로 접힘
+function charEm(ch) {
+  if (ch === " ") return 0.3;
+  if (/[0-9]/.test(ch)) return 0.6;
+  if (/[A-Za-z]/.test(ch)) return 0.55;
+  if (/[.,·:;'"‘’“”()\[\]\-~!?\/]/.test(ch)) return 0.35;
+  return 1; // 한글·한자·원문자(①) 등
+}
+function wrapLine(line, per) {
+  let lines = 1, cur = 0;
+  for (const word of line.split(" ")) {
+    let w = 0;
+    for (const ch of word) w += charEm(ch);
+    const add = (cur > 0 ? 0.3 : 0) + w;
+    if (cur > 0 && cur + add > per) { lines++; cur = w; }
+    else cur += add;
+    while (cur > per) { lines++; cur -= per; } // 한 낱말이 한 줄보다 길 때
+  }
+  return lines;
+}
 // 홈 화면 착색(틴트)·투명 모드에서는 색이 단색으로 바뀌므로, 배경색 칸 대신 글자 굵기와 테두리로 구분한다
 function txt(stack, s, font, color, lines) {
   const t = stack.addText(String(s));
@@ -443,13 +463,14 @@ function itemLine(stack, it, now, size) {
 function courseCard(parent, v, now, opt) {
   const card = parent.addStack();
   card.layoutVertically();
-  card.setPadding(10, 12, opt.fill ? 6 : 10, 12);
+  if (opt.compact) card.setPadding(8, 10, 8, 10); // 격자: 두 줄을 한 위젯에 넣어야 해서 여백을 조금 줄임
+  else card.setPadding(10, 12, opt.fill ? 6 : 10, 12);
   card.cornerRadius = 12;
   card.borderWidth = 1;
   card.borderColor = C.line;
   card.url = runUrl({ course: v.course });
   // 너비는 고정하지 않는다: 첫 줄의 늘어나는 여백 덕분에 칸들이 위젯 너비를 나눠 채운다
-  card.spacing = 4;
+  card.spacing = opt.compact ? 3 : 4;
 
   const top = card.addStack();
   top.centerAlignContent();
@@ -463,24 +484,18 @@ function courseCard(parent, v, now, opt) {
   if (v.items.length > opt.items) txt(card, `외 ${v.items.length - opt.items}건`, Font.systemFont(fs(10.5)), C.sub);
 
   // 과제 내용·시험 범위: 칸의 중심. 다음 평가 것이 먼저, 과목 메모는 뒤
-  card.addSpacer(4);
+  card.addSpacer(opt.compact ? 2 : 4);
   const hasScopes = v.scopes.length > 0;
   if (hasScopes) {
     let left = opt.scopeLines; // 칸 안에서 쓸 수 있는 줄 수를 항목끼리 나눔
-    const cpl = Math.max(8, Math.floor((opt.cpl || 24) / SCALE)); // 한 줄에 들어가는 글자 수 (어림)
-    const wrapCount = (body, per) => body.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / per)), 0);
+    const cpl = Math.max(6, (opt.cpl || 20) / SCALE); // 한 줄 너비 (본문 글자 크기의 em 단위, 한글 한 글자 = 1)
+    const wrapCount = (body, per) => body.split("\n").reduce((n, l) => n + wrapLine(l, per), 0);
     if (opt.fill) {
-      // 꽉 채우기: 위젯은 여러 줄 글자를 스스로 줄여 주지 않으므로, 전부 들어가는 글자 크기를 직접 고른다
-      // 칸 높이를 "14pt 본문 줄" 단위로 어림 (아이패드 대형·특대형 위젯 높이 기준, 일정 줄·제목 줄 몫은 뺌)
-      const shownItems = Math.max(1, Math.min(v.items.length, opt.items)) + (v.items.length > opt.items ? 1 : 0);
-      const room = (FILL_ROOM - 0.9 * (shownItems + v.scopes.length)) / SCALE;
-      const bodies = v.scopes.map((s) => String(s.scope).trim());
-      let k = 1;
-      while (k > 0.5 && bodies.reduce((n, b) => n + wrapCount(b, cpl / k), 0) * k > room) k = Math.round((k - 0.05) * 100) / 100;
-      bodies.forEach((body, i) => {
-        txt(card, v.scopes[i].kind || "메모", Font.semiboldSystemFont(fs(12)), C.blue, 1);
-        const t = txt(card, body, Font.systemFont(fs(14 * k)), C.text, wrapCount(body, cpl / k) + 1);
-        t.minimumScaleFactor = 0.8; // 어림이 조금 빗나가도 잘리기 전에 한 번 더 줄임
+      // 꽉 채우기: 줄 수 제한을 두지 않고 원래 크기로 넣는다. 칸 높이는 위젯(iOS)이 정하고,
+      // 남은 높이만큼 글자가 차고 넘치는 부분은 위젯이 "…"로 자른다 (눌러서 상세 화면)
+      v.scopes.forEach((s) => {
+        txt(card, s.kind || "메모", Font.semiboldSystemFont(fs(12)), C.blue, 1);
+        txt(card, String(s.scope).trim(), Font.systemFont(fs(14)), C.text, 0);
       });
       v.scopes = []; // 아래 일반 경로는 건너뜀
     }
@@ -488,7 +503,7 @@ function courseCard(parent, v, now, opt) {
       if (left <= 0 && !opt.fill) return;
       const body = String(s.scope).trim();
       // 줄바꿈 수가 아니라 화면에서 접히는 줄 수로 센다. 마지막 항목은 남은 줄을 모두 쓴다
-      const wrapped = body.split("\n").reduce((n, l) => n + Math.max(1, Math.ceil(l.length / cpl)), 0);
+      const wrapped = wrapCount(body, cpl);
       const last = i === v.scopes.length - 1;
       const want = last ? left : Math.min(left, Math.max(2, wrapped + 1));
       txt(card, s.kind || "메모", Font.semiboldSystemFont(fs(opt.big ? 12 : 11)), C.blue, 1);
@@ -499,7 +514,7 @@ function courseCard(parent, v, now, opt) {
   } else {
     txt(card, "과제 내용 없음", Font.systemFont(fs(12)), C.sub);
   }
-  if (!opt.fill || !hasScopes) card.addSpacer(); // 꽉 채우기에서 메모가 있으면 아래 빈칸 없이
+  card.addSpacer(); // 칸 테두리는 위젯 아래 끝까지 늘림
   return card;
 }
 
@@ -537,40 +552,49 @@ function drawSummary(w, data, now, limit, size) {
   }
 }
 
-function formativeLine(w, data, now) {
+// 맨 아래 한 줄: 왼쪽 형성평가, 오른쪽 "외 N과목" (격자에서 다 못 보여 준 과목 수. 둘 다 없으면 줄도 없음)
+function formativeLine(w, data, now, extra) {
   const f = upcoming(data.agenda, now).find((i) => i.course === "형성평가");
-  if (!f) return;
-  w.addSpacer(6);
+  if (!f && !extra) return;
+  w.addSpacer(extra === undefined ? 6 : 4);
   const r = w.addStack();
-  txt(r, "형성평가 ", Font.semiboldSystemFont(fs(11)), C.sub);
-  txt(r, `${ddayText(f, now)} · ${whenText(f, now)}`, Font.systemFont(fs(11)), C.sub, 1);
+  r.centerAlignContent();
+  if (f) {
+    txt(r, "형성평가 ", Font.semiboldSystemFont(fs(11)), C.sub, 1);
+    txt(r, `${ddayText(f, now)} · ${whenText(f, now)}`, Font.systemFont(fs(11)), C.sub, 1).minimumScaleFactor = 0.7;
+  }
+  if (extra) {
+    r.addSpacer();
+    txt(r, `외 ${extra}과목 더 보기`, Font.systemFont(fs(11)), C.sub, 1);
+  }
 }
 
 // A: 위젯 하나에 과목 칸 격자. 칸을 누르면 그 과목 상세 화면
+// 칸을 그렸으면 { extra: 다 못 보여 준 과목 수 }를, 다른 것(안내·요약)을 그렸으면 null을 돌려준다
 function drawGrid(w, data, now, family) {
   const courses = coursesOf(data.agenda);
-  if (!courses.length) { message(w, "과목 정보가 없습니다"); return; }
-  if (family === "medium") { drawSummary(w, data, now, 3, 13); return; }
+  if (!courses.length) { message(w, "과목 정보가 없습니다"); return null; }
+  if (family === "medium") { drawSummary(w, data, now, 3, 13); return null; }
   const cols = family === "extraLarge" ? 3 : 2;
   const rowsMax = family === "extraLarge" ? 2 : 3;
   const shown = courses.slice(0, cols * rowsMax);
   const rowCount = Math.ceil(shown.length / cols);
   const opt = family === "extraLarge"
-    ? { items: rowCount > 1 ? 1 : 2, scopeLines: rowCount > 1 ? 5 : 9, cpl: 22 } // 일정은 1~2줄, 나머지는 과제 내용
-    : { items: 1, scopeLines: 3, cpl: 18 };
+    ? { items: rowCount > 1 ? 1 : 2, scopeLines: rowCount > 1 ? 5 : 9, cpl: 19, compact: true } // 일정은 1~2줄, 나머지는 과제 내용
+    : { items: 1, scopeLines: 3, cpl: 15, compact: true };
   const grid = w.addStack();
   grid.layoutVertically();
-  grid.spacing = 8;
+  grid.spacing = 6;
   for (let r = 0; r < rowCount; r++) {
     const row = grid.addStack();
-    row.spacing = 8;
+    row.spacing = 6;
     for (let c = 0; c < cols; c++) {
       const course = shown[r * cols + c];
       if (course) courseCard(row, courseView(data, course, now), now, opt);
       else { const blank = row.addStack(); blank.addSpacer(); } // 빈 칸도 같은 몫의 너비를 차지
     }
   }
-  if (courses.length > shown.length) txt(w, `외 ${courses.length - shown.length}과목 — 눌러서 전체 보기`, Font.systemFont(fs(11)), C.sub);
+  return { extra: courses.length - shown.length }; // "외 N과목"은 맨 아래 형성평가 줄에 함께 넣는다 (formativeLine)
 }
 
 // B: 매개변수로 고른 과목을 크게. 비어 있으면 요약
@@ -585,8 +609,8 @@ function drawPicked(w, data, now, family, param) {
   const row = w.addStack();
   row.spacing = 10;
   for (const course of picked.slice(0, n)) {
-    // 줄 수는 넉넉히 준다: 칸보다 길면 위젯이 알아서 칸 높이에서 자르고 "…"를 붙인다
-    const cpl = family === "extraLarge" ? (n === 1 ? 50 : 24) : 25; // 한 줄 글자 수 (11/12 아이패드 화면에서 잼: 특대형 한 과목 약 52자)
+    // 한 줄 너비(em). 11/12 아이패드 특대형 한 과목에서 14pt 한 줄 ≈ 한글 41자 + 띄어쓰기 12개 ≈ 44.6em
+    const cpl = family === "extraLarge" ? (n === 1 ? 44 : 21) : 21;
     courseCard(row, courseView(data, course, now), now, { big: true, items: family === "medium" ? 1 : 2, scopeLines: family === "medium" ? 3 : 14, cpl, fill: family !== "medium" });
   }
 }
@@ -623,26 +647,41 @@ async function buildWidget(family, rawParam) {
   const view = viewOf(param);
   const picked = view === "picked" ? pickCourses(param, coursesOf(data.agenda)) : [];
   header(w, data, now, picked.length ? picked.slice(0, family === "extraLarge" ? 2 : 1).join(" · ") : "");
-  w.addSpacer(10);
-  if (view === "grid") drawGrid(w, data, now, family);
+  const cards = view === "grid" && family !== "medium"; // 과목 칸 격자를 그리는 경우
+  w.addSpacer(cards ? 6 : 10);
+  let grid = null;
+  if (view === "grid") grid = drawGrid(w, data, now, family);
   else if (view === "summary") drawSummary(w, data, now, family === "extraLarge" || family === "large" ? 7 : 3, 13);
   else drawPicked(w, data, now, family, param);
-  if (view !== "picked") formativeLine(w, data, now);
-  w.addSpacer();
+  // 칸이 있는 화면(격자, 과목 크게)은 칸이 아래 끝까지 차도록 위젯 쪽 빈칸을 두지 않는다
+  if (grid) formativeLine(w, data, now, grid.extra);
+  else if (view !== "picked") { formativeLine(w, data, now); w.addSpacer(); }
   return w;
 }
 
 // ---------------- 상세 화면 (스크롤 가능한 웹 화면) ----------------
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// [복사]로 넣을 글: 적힌 항목이 하나면 내용만, 여럿이면 "기말평가" 같은 제목을 붙이고 빈 줄로 나눈다
+function scopeCopyText(scopes) {
+  const filled = scopes.filter((s) => String(s.scope || "").trim());
+  if (filled.length === 1) return String(filled[0].scope).trim();
+  return filled.map((s) => `${s.kind || "메모"}\n${String(s.scope).trim()}`).join("\n\n");
+}
+
 function detailHtml(data, courses, now) {
   const all = data.agenda?.items || [];
-  const sections = courses.map((course) => {
+  const copies = []; // 과목 순서대로 복사할 글 (없으면 "")
+  const sections = courses.map((course, idx) => {
     const v = courseView(data, course, now);
     const past = all.filter((i) => i.course === course && new Date(i.end) < now).sort((a, b) => targetOf(b) - targetOf(a));
     const scopes = (data.scope?.items || []).filter((s) => s.course === course);
+    copies.push(scopeCopyText(scopes));
     const li = (it, old) => `<li class="${old ? "old" : ""}"><b class="d ${old ? "" : ddayOf(it, now) <= 3 ? "r" : ddayOf(it, now) <= 7 ? "o" : ""}">${old ? "지남" : esc(ddayText(it, now))}</b><span><b>${esc(it.label)}</b>${it.detail ? " · " + esc(it.detail) : ""}<br><small>${esc(whenText(it, now))}${it.kind === "class" && it.place ? " · " + esc(it.place) : ""}</small></span></li>`;
-    return `<section><h2>${esc(course)}${v.next ? ` <span class="d ${ddayOf(v.next, now) <= 3 ? "r" : ddayOf(v.next, now) <= 7 ? "o" : ""}">${esc(ddayText(v.next, now))}</span>` : ""}</h2>
+    const copyBtn = copies[idx] ? `<button class="copy" onclick="copyScope(${idx})">과제 내용 복사</button>` : "";
+    const dday = v.next ? `<span class="d ${ddayOf(v.next, now) <= 3 ? "r" : ddayOf(v.next, now) <= 7 ? "o" : ""}">${esc(ddayText(v.next, now))}</span>` : "";
+    // 제목 줄: 왼쪽 과목명, 오른쪽에 [과제 내용 복사]와 남은 날짜 (좁은 화면에서는 오른쪽 묶음이 아랫줄로 내려감)
+    return `<section><h2><span>${esc(course)}</span>${copyBtn || dday ? `<span class="act">${copyBtn}${dday}</span>` : ""}</h2>
       <h3>과제 내용·시험 범위</h3>${scopes.length ? scopes.map((s) => `<p class="scope"><b>${esc(s.kind || "메모")}</b> ${String(s.scope || "").trim() ? esc(s.scope).replace(/\n/g, "<br>") : '<span class="muted">비어 있음</span>'}</p>`).join("") : '<p class="muted">적힌 내용이 없습니다.</p>'}
       <h3>남은 일정</h3><ul>${v.items.map((i) => li(i, false)).join("") || '<li class="muted">없음</li>'}</ul>
       ${past.length ? `<details><summary>지난 일정 ${past.length}건</summary><ul>${past.map((i) => li(i, true)).join("")}</ul></details>` : ""}</section>`;
@@ -656,14 +695,43 @@ body{margin:0;padding:20px 20px 40px;background:var(--bg);color:var(--fg);font:1
 header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
 header h1{font-size:22px;margin:0}header small{color:var(--sub)}
 section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:12px 0}
-h2{font-size:19px;margin:0 0 6px;display:flex;justify-content:space-between}
+h2{font-size:19px;margin:0 0 6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.act{display:flex;align-items:center;gap:12px;margin-left:auto}.act .d{min-width:0}
 h3{font-size:13px;color:var(--sub);margin:12px 0 4px;font-weight:600}
 ul{list-style:none;margin:0;padding:0}li{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--line)}li:first-child{border-top:0}
 .d{min-width:52px;color:var(--sub);font-weight:700}.d.r{color:var(--r)}.d.o{color:var(--o)}
 small,.muted{color:var(--sub)}.old{opacity:.55}.scope{margin:4px 0}
 details summary{color:var(--sub);font-size:14px;margin-top:10px}
+.copy{padding:8px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:#0a84ff;font:600 16px -apple-system,system-ui,sans-serif}
+.copy:active{opacity:.5}
+#pop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:9}
+#pop[hidden]{display:none}
+#pop .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 24px 14px;min-width:240px;max-width:80%;text-align:center}
+#pop p{margin:0 0 14px;font-size:16px}
+#pop button{width:100%;padding:10px 0 4px;border:0;border-top:1px solid var(--line);background:none;color:#0a84ff;font:600 16px -apple-system,system-ui,sans-serif}
 </style></head><body><header><h1>${courses.length === 1 ? esc(courses[0]) : "전체 과목"}</h1><small>${saved ? "PC 동기화 " + esc(md(saved) + " " + hm(saved)) : ""}${data.offline ? " · 오프라인" : ""}</small></header>${sections}
-<p class="muted" style="font-size:13px">닫으면 메모 편집 메뉴가 나옵니다. (원본: Dropbox › Apps › KnouWidget › knou_scope.txt)</p></body></html>`;
+<p class="muted" style="font-size:13px">닫으면 메모 편집 메뉴가 나옵니다. (원본: Dropbox › Apps › KnouWidget › knou_scope.txt)</p>
+<div id="pop" hidden onclick="this.hidden=true"><div class="box"><p id="popMsg"></p><button>확인</button></div></div>
+<script>
+var COPY = ${JSON.stringify(copies).replace(/</g, "\\u003c")};
+function say(msg) { document.getElementById("popMsg").textContent = msg; document.getElementById("pop").hidden = false; }
+// [복사]: 보이지 않는 글상자에 넣고 선택해서 복사한다 (이 화면에는 navigator.clipboard가 없음)
+function copyScope(i) {
+  var text = COPY[i] || "", ok = false;
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;font-size:16px";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+  } catch (e) {}
+  say(ok ? "과제 내용이 복사되었습니다." : "복사하지 못했습니다. 글자를 길게 눌러 직접 복사해 주세요.");
+}
+</script></body></html>`;
 }
 
 async function showDetail(courses) {
@@ -672,6 +740,8 @@ async function showDetail(courses) {
   const list = courses.length ? courses : coursesOf(data.agenda);
   const wv = new WebView();
   await wv.loadHTML(detailHtml(data, list, new Date()));
+  // 주의: v1.1.6은 화면을 띄운 채 wv.evaluateJavaScript(…, true)로 [복사]를 기다렸는데, 실제 기기에서 화면이 비었다.
+  // 그래서 [복사]는 웹 화면 안에서만 처리하고, 여기서는 v1.1.5까지와 똑같이 띄우기만 한다
   await wv.present(true);
   // 닫은 뒤: 바로 편집할 수 있게
   const m = new Alert();
@@ -878,8 +948,8 @@ async function courseTable() {
   const list = coursesOf(data.agenda);
   const a = new Alert();
   a.title = "위젯 Parameter";
-  a.message = "비움 또는 a : 과목 칸\nb : 마감 순 요약\n" + list.map((c, i) => `${i + 1} : ${c}`).join("\n") +
-    "\n\n과목은 쉼표로 여러 개: 1,2 (특대형은 두 과목)\n뒤에 크기: a 크게 / b 작게 / 1,2 아주 크게";
+  a.message = "비움 : 과목 칸\n0 : 마감 순 요약\n" + list.map((c, i) => `${i + 1} : ${c}`).join("\n") +
+    "\n\n과목은 쉼표로 여러 개: 1,2 (특대형은 두 과목)\n뒤에 크기: 크게 / 0 작게 / 1,2 아주 크게";
   a.addAction("확인");
   await a.presentAlert();
 }
@@ -941,8 +1011,8 @@ async function appMenu() {
     add("과제 메모 파일 안내", scopeHelp);
     add("글자 크기", chooseFontSize);
     add("Parameter 안내 (과목 번호)", courseTable);
-    add("미리보기: a (과목 칸)", async () => (await buildWidget("extraLarge", "a")).presentExtraLarge());
-    add("미리보기: b (마감 순 요약)", async () => (await buildWidget("extraLarge", "b")).presentExtraLarge());
+    add("미리보기: 비움 (과목 칸)", async () => (await buildWidget("extraLarge", "")).presentExtraLarge());
+    add("미리보기: 0 (마감 순 요약)", async () => (await buildWidget("extraLarge", "0")).presentExtraLarge());
     add("미리보기: 1,2 (고른 과목)", async () => (await buildWidget("extraLarge", "1,2")).presentExtraLarge());
     add("Dropbox 다시 연결", async () => (await connectDropbox()) === "pending" ? "stop" : null);
     add(`업데이트 확인 (지금 v${WIDGET_VERSION})`, async () => ((await checkUpdate({ manual: true })) === "updated" ? "stop" : null));
